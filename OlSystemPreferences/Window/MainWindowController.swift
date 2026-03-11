@@ -3,11 +3,11 @@ import Cocoa
 class MainWindowController: NSWindowController, NSToolbarDelegate {
 
     private let gridViewController = GridViewController()
+    private let navControl = SnowLeopardNavControl(frame: NSRect(x: 0, y: 0, width: 56, height: 24))
 
     // Toolbar item identifiers
     private let toolbarIdentifier = NSToolbar.Identifier("MainToolbar")
-    private let backItemID = NSToolbarItem.Identifier("back")
-    private let forwardItemID = NSToolbarItem.Identifier("forward")
+    private let navItemID = NSToolbarItem.Identifier("nav")
     private let showAllItemID = NSToolbarItem.Identifier("showAll")
     private let searchItemID = NSToolbarItem.Identifier("search")
 
@@ -21,6 +21,7 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         window.title = "System Preferences"
         window.minSize = AppConstants.windowMinSize
         window.titlebarAppearsTransparent = false
+        window.titleVisibility = .visible
         window.isMovableByWindowBackground = false
         window.appearance = NSAppearance(named: .aqua)
         window.backgroundColor = SnowLeopardColors.gridBackground
@@ -58,7 +59,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
     // MARK: - Toolbar Actions
 
     @objc func showAll(_ sender: Any?) {
-        // Clear search and show all items
         if let toolbar = window?.toolbar {
             for item in toolbar.items {
                 if let searchItem = item as? NSSearchToolbarItem {
@@ -77,31 +77,29 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch itemIdentifier {
-        case backItemID:
-            let item = NSToolbarItem(itemIdentifier: backItemID)
-            item.label = "Back"
-            item.image = NSImage(systemSymbolName: "chevron.left", accessibilityDescription: "Back")
-            item.isEnabled = false
-            return item
-
-        case forwardItemID:
-            let item = NSToolbarItem(itemIdentifier: forwardItemID)
-            item.label = "Forward"
-            item.image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Forward")
-            item.isEnabled = false
+        case navItemID:
+            let item = NSToolbarItem(itemIdentifier: navItemID)
+            item.label = "Navigation"
+            item.view = navControl
+            item.minSize = navControl.intrinsicContentSize
+            item.maxSize = navControl.intrinsicContentSize
             return item
 
         case showAllItemID:
             let item = NSToolbarItem(itemIdentifier: showAllItemID)
             item.label = "Show All"
-            item.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Show All")
-            item.action = #selector(showAll(_:))
-            item.target = self
+            let button = SnowLeopardShowAllButton(frame: NSRect(x: 0, y: 0, width: 32, height: 24))
+            button.target = self
+            button.action = #selector(showAll(_:))
+            item.view = button
+            item.minSize = NSSize(width: 32, height: 24)
+            item.maxSize = NSSize(width: 32, height: 24)
             return item
 
         case searchItemID:
             let item = NSSearchToolbarItem(itemIdentifier: searchItemID)
             item.searchField.delegate = self
+            item.searchField.font = SnowLeopardFonts.label(size: 12)
             item.label = "Search"
             return item
 
@@ -112,8 +110,7 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         return [
-            backItemID,
-            forwardItemID,
+            navItemID,
             showAllItemID,
             .flexibleSpace,
             searchItemID,

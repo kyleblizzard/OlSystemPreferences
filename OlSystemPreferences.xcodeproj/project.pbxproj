@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1C6764BBA02AE41C8438F479 /* SoundPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5A7D9063BD46435C813785 /* SoundPaneViewController.swift */; };
 		2ACB6E3CDA77055E7A72F4DD /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = AE226221E63EC651ADA7341E /* AppIcon.icns */; };
+		2FA5E5A702E7CDBD17FB7ED4 /* SnowLeopardNavControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B5373CCB8768F111AFE817 /* SnowLeopardNavControl.swift */; };
 		35C54D4DDE0220DA4B1AEDCF /* DockPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFCDD499F5EFEB40577906CD /* DockPaneViewController.swift */; };
 		39156C8354B6ED34A231CA4C /* MouseTrackpadPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2921BADF3D5EAD2A05E5A4C7 /* MouseTrackpadPaneViewController.swift */; };
 		40FC0B003E4CDF759C85CD73 /* GeneralPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54B4B3E606B24DB7E70F1C1 /* GeneralPaneViewController.swift */; };
@@ -40,6 +41,7 @@
 		3625D904128B62F37C9573EC /* AppDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetector.swift; sourceTree = "<group>"; };
 		3BCC1589FD67299AE27F565B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		4BB319BD73C5516AB4B33662 /* AudioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioService.swift; sourceTree = "<group>"; };
+		53B5373CCB8768F111AFE817 /* SnowLeopardNavControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnowLeopardNavControl.swift; sourceTree = "<group>"; };
 		6CACA43A2B30A10CB24BDDA6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6D7420C2AD6E87683938844A /* PaneProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneProtocol.swift; sourceTree = "<group>"; };
 		77F1DAEE1E042ACA252FC32A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -122,6 +124,7 @@
 				C1D8F94EC84FD132FB0BC926 /* GridItemView.swift */,
 				D254240918E799C55A7948DD /* GridViewController.swift */,
 				E57D53021C7DF43D5C682808 /* MainWindowController.swift */,
+				53B5373CCB8768F111AFE817 /* SnowLeopardNavControl.swift */,
 			);
 			path = Window;
 			sourceTree = "<group>";
@@ -329,6 +332,7 @@
 				86A287C428A2872384D53D4E /* PaneProtocol.swift in Sources */,
 				85447ECF5E90B647FD13F4A2 /* PreferenceItem.swift in Sources */,
 				97373F5430B65117E5EC8110 /* SearchManager.swift in Sources */,
+				2FA5E5A702E7CDBD17FB7ED4 /* SnowLeopardNavControl.swift in Sources */,
 				1C6764BBA02AE41C8438F479 /* SoundPaneViewController.swift in Sources */,
 				4D55A9FF53B05D87E06754C3 /* main.swift in Sources */,
 			);

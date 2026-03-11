@@ -134,7 +134,7 @@ extension PreferenceItem {
             id: "controlcenter",
             title: "Control Center",
             sfSymbol: "switch.2",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.45, green: 0.45, blue: 0.50, alpha: 1.0),
             category: .personal,
             settingsURL: "com.apple.ControlCenter-Settings.extension",
             keywords: ["menu bar", "control center", "widgets", "clock", "bluetooth", "wifi"]
@@ -175,7 +175,7 @@ extension PreferenceItem {
             id: "keyboard",
             title: "Keyboard",
             sfSymbol: "keyboard",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Keyboard-Settings.extension",
             keywords: ["key repeat", "shortcuts", "input sources", "dictation", "text replacement"]
@@ -184,7 +184,7 @@ extension PreferenceItem {
             id: "mouse",
             title: "Mouse",
             sfSymbol: "computermouse.fill",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Mouse-Settings.extension",
             keywords: ["tracking", "scrolling", "clicking", "mouse"]
@@ -193,7 +193,7 @@ extension PreferenceItem {
             id: "trackpad",
             title: "Trackpad",
             sfSymbol: "rectangle.and.hand.point.up.left.fill",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Trackpad-Settings.extension",
             keywords: ["trackpad", "gestures", "tap", "click", "scroll", "force click"]
@@ -202,7 +202,7 @@ extension PreferenceItem {
             id: "printers",
             title: "Printers & Scanners",
             sfSymbol: "printer.fill",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.35, green: 0.55, blue: 0.75, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Print-Scan-Settings.extension",
             keywords: ["printer", "scanner", "print", "fax"]
@@ -284,7 +284,7 @@ extension PreferenceItem {
             id: "general",
             title: "General",
             sfSymbol: "gearshape",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.50, green: 0.50, blue: 0.55, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.systempreferences.GeneralSettings",
             keywords: ["about", "software update", "storage", "airdrop", "login items", "language"]
@@ -302,7 +302,7 @@ extension PreferenceItem {
             id: "passwords",
             title: "Passwords",
             sfSymbol: "key.fill",
-            iconColor: .systemGray,
+            iconColor: .systemYellow,
             category: .system,
             settingsURL: "com.apple.Passwords-Settings.extension",
             keywords: ["passwords", "keychain", "passkey", "autofill"]
@@ -338,7 +338,7 @@ extension PreferenceItem {
             id: "softwareupdate",
             title: "Software Update",
             sfSymbol: "arrow.triangle.2.circlepath",
-            iconColor: .systemGray,
+            iconColor: .systemBlue,
             category: .system,
             settingsURL: "com.apple.Software-Update-Settings.extension",
             keywords: ["update", "upgrade", "macos", "automatic updates"]
@@ -374,7 +374,7 @@ extension PreferenceItem {
             id: "startupdisk",
             title: "Startup Disk",
             sfSymbol: "internaldrive.fill",
-            iconColor: .systemGray,
+            iconColor: NSColor(calibratedRed: 0.50, green: 0.50, blue: 0.55, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Startup-Disk-Settings.extension",
             keywords: ["startup", "boot", "disk", "volume"]

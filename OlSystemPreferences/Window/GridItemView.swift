@@ -9,6 +9,15 @@ class GridItemView: NSCollectionViewItem {
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.imageScaling = .scaleProportionallyUpOrDown
         iv.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .regular)
+            .applying(.preferringMulticolor())
+        // Subtle drop shadow for depth (Snow Leopard icon style)
+        iv.shadow = {
+            let s = NSShadow()
+            s.shadowOffset = NSSize(width: 0, height: -1)
+            s.shadowBlurRadius = 2.0
+            s.shadowColor = NSColor(white: 0.0, alpha: 0.35)
+            return s
+        }()
         return iv
     }()
 
@@ -21,7 +30,6 @@ class GridItemView: NSCollectionViewItem {
         label.maximumNumberOfLines = 2
         label.cell?.truncatesLastVisibleLine = true
         label.textColor = SnowLeopardColors.labelColor
-        // Subtle white drop shadow (emboss effect on light backgrounds)
         label.shadow = {
             let s = NSShadow()
             s.shadowOffset = NSSize(width: 0, height: -1)
@@ -53,12 +61,12 @@ class GridItemView: NSCollectionViewItem {
             selectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
             selectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -1),
 
-            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
+            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 4),
             iconImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: AppConstants.iconSize),
             iconImageView.heightAnchor.constraint(equalToConstant: AppConstants.iconSize),
 
-            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 3),
+            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 2),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 1),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -1),
             titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -2),
@@ -102,7 +110,16 @@ class GridItemView: NSCollectionViewItem {
     func configure(title: String, icon: NSImage, tintColor: NSColor?) {
         titleLabel.stringValue = title
         iconImageView.image = icon
-        iconImageView.contentTintColor = tintColor
+        if let tintColor = tintColor {
+            // For SF Symbols: use hierarchical rendering with the color for depth
+            iconImageView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .regular)
+                .applying(.init(hierarchicalColor: tintColor))
+            iconImageView.contentTintColor = tintColor
+        } else {
+            // For app icons: no tint, no symbol config
+            iconImageView.symbolConfiguration = nil
+            iconImageView.contentTintColor = nil
+        }
     }
 }
 
@@ -139,6 +156,22 @@ private class SelectionBackgroundView: NSView {
             )
             gradient?.draw(in: path, angle: 270)
 
+            // Aqua gloss: white highlight in upper portion
+            NSGraphicsContext.saveGraphicsState()
+            path.addClip()
+            let glossRect = NSRect(
+                x: rect.origin.x,
+                y: rect.origin.y + rect.height * 0.5,
+                width: rect.width,
+                height: rect.height * 0.5
+            )
+            let glossGradient = NSGradient(
+                starting: NSColor(white: 1.0, alpha: 0.28),
+                ending: NSColor(white: 1.0, alpha: 0.04)
+            )
+            glossGradient?.draw(in: glossRect, angle: 270)
+            NSGraphicsContext.restoreGraphicsState()
+
             // Border
             SnowLeopardColors.selectionBorder.setStroke()
             path.lineWidth = 1.0
@@ -158,7 +191,6 @@ class GridSectionHeaderView: NSView, NSCollectionViewSectionHeaderView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = SnowLeopardFonts.boldLabel(size: 11)
         label.textColor = SnowLeopardColors.headerTextColor
-        // Dark text shadow for emboss on dark background
         label.shadow = {
             let s = NSShadow()
             s.shadowOffset = NSSize(width: 0, height: -1)
