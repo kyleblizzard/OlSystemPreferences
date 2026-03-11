@@ -8,7 +8,7 @@ class GridItemView: NSCollectionViewItem {
         let iv = NSImageView()
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.imageScaling = .scaleProportionallyUpOrDown
-        iv.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .light)
+        iv.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .regular)
         return iv
     }()
 
@@ -16,17 +16,26 @@ class GridItemView: NSCollectionViewItem {
         let label = NSTextField(labelWithString: "")
         label.translatesAutoresizingMaskIntoConstraints = false
         label.alignment = .center
-        label.font = NSFont.systemFont(ofSize: 11)
-        label.lineBreakMode = .byTruncatingTail
+        label.font = SnowLeopardFonts.label(size: 11)
+        label.lineBreakMode = .byWordWrapping
         label.maximumNumberOfLines = 2
+        label.cell?.truncatesLastVisibleLine = true
+        label.textColor = SnowLeopardColors.labelColor
+        // Subtle white drop shadow (emboss effect on light backgrounds)
+        label.shadow = {
+            let s = NSShadow()
+            s.shadowOffset = NSSize(width: 0, height: -1)
+            s.shadowColor = SnowLeopardColors.labelShadowColor
+            s.shadowBlurRadius = 0
+            return s
+        }()
         return label
     }()
 
-    private let containerView: NSView = {
-        let v = NSView()
+    private let selectionView: SelectionBackgroundView = {
+        let v = SelectionBackgroundView()
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.wantsLayer = true
-        v.layer?.cornerRadius = 8
+        v.isHidden = true
         return v
     }()
 
@@ -34,61 +43,111 @@ class GridItemView: NSCollectionViewItem {
         view = NSView()
         view.wantsLayer = true
 
-        view.addSubview(containerView)
-        containerView.addSubview(iconImageView)
-        containerView.addSubview(titleLabel)
+        view.addSubview(selectionView)
+        view.addSubview(iconImageView)
+        view.addSubview(titleLabel)
 
         NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: view.topAnchor, constant: 2),
-            containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
-            containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -2),
+            selectionView.topAnchor.constraint(equalTo: view.topAnchor, constant: 1),
+            selectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+            selectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+            selectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -1),
 
-            iconImageView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 6),
-            iconImageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
+            iconImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: AppConstants.iconSize),
             iconImageView.heightAnchor.constraint(equalToConstant: AppConstants.iconSize),
 
-            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 4),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 2),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -2),
-            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -4),
+            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 3),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 1),
+            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -1),
+            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -2),
         ])
     }
 
     override var isSelected: Bool {
-        didSet {
-            containerView.layer?.backgroundColor = isSelected
-                ? NSColor.controlAccentColor.withAlphaComponent(0.2).cgColor
-                : nil
-        }
+        didSet { updateAppearance() }
     }
 
     override var highlightState: NSCollectionViewItem.HighlightState {
-        didSet {
-            switch highlightState {
-            case .forSelection:
-                containerView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.1).cgColor
-            case .forDeselection, .none:
-                containerView.layer?.backgroundColor = isSelected
-                    ? NSColor.controlAccentColor.withAlphaComponent(0.2).cgColor
-                    : nil
-            case .asDropTarget:
-                break
-            @unknown default:
-                break
-            }
+        didSet { updateAppearance() }
+    }
+
+    private func updateAppearance() {
+        if isSelected {
+            selectionView.isHidden = false
+            selectionView.isHovered = false
+            titleLabel.textColor = .white
+            titleLabel.shadow = nil
+        } else if highlightState == .forSelection {
+            selectionView.isHidden = false
+            selectionView.isHovered = true
+            titleLabel.textColor = SnowLeopardColors.labelColor
+            titleLabel.shadow = makeLabelShadow()
+        } else {
+            selectionView.isHidden = true
+            titleLabel.textColor = SnowLeopardColors.labelColor
+            titleLabel.shadow = makeLabelShadow()
         }
     }
 
-    func configure(title: String, icon: NSImage) {
+    private func makeLabelShadow() -> NSShadow {
+        let s = NSShadow()
+        s.shadowOffset = NSSize(width: 0, height: -1)
+        s.shadowColor = SnowLeopardColors.labelShadowColor
+        s.shadowBlurRadius = 0
+        return s
+    }
+
+    func configure(title: String, icon: NSImage, tintColor: NSColor?) {
         titleLabel.stringValue = title
         iconImageView.image = icon
-        iconImageView.contentTintColor = NSColor.controlAccentColor
+        iconImageView.contentTintColor = tintColor
     }
 }
 
-// MARK: - Section Header
+// MARK: - Aqua-Style Selection Background
+
+private class SelectionBackgroundView: NSView {
+
+    var isHovered = false {
+        didSet { needsDisplay = true }
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = false
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        wantsLayer = false
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let rect = bounds.insetBy(dx: 1, dy: 1)
+        let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
+
+        if isHovered {
+            SnowLeopardColors.hoverBackground.setFill()
+            path.fill()
+        } else {
+            // Aqua blue gradient selection
+            let gradient = NSGradient(
+                starting: SnowLeopardColors.selectionTop,
+                ending: SnowLeopardColors.selectionBottom
+            )
+            gradient?.draw(in: path, angle: 270)
+
+            // Border
+            SnowLeopardColors.selectionBorder.setStroke()
+            path.lineWidth = 1.0
+            path.stroke()
+        }
+    }
+}
+
+// MARK: - Snow Leopard Section Header
 
 class GridSectionHeaderView: NSView, NSCollectionViewSectionHeaderView {
 
@@ -97,17 +156,17 @@ class GridSectionHeaderView: NSView, NSCollectionViewSectionHeaderView {
     let titleLabel: NSTextField = {
         let label = NSTextField(labelWithString: "")
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .secondaryLabelColor
+        label.font = SnowLeopardFonts.boldLabel(size: 11)
+        label.textColor = SnowLeopardColors.headerTextColor
+        // Dark text shadow for emboss on dark background
+        label.shadow = {
+            let s = NSShadow()
+            s.shadowOffset = NSSize(width: 0, height: -1)
+            s.shadowColor = SnowLeopardColors.headerTextShadowColor
+            s.shadowBlurRadius = 0
+            return s
+        }()
         return label
-    }()
-
-    private let separatorView: NSView = {
-        let v = NSView()
-        v.translatesAutoresizingMaskIntoConstraints = false
-        v.wantsLayer = true
-        v.layer?.backgroundColor = NSColor.separatorColor.cgColor
-        return v
     }()
 
     override init(frame frameRect: NSRect) {
@@ -121,19 +180,30 @@ class GridSectionHeaderView: NSView, NSCollectionViewSectionHeaderView {
     }
 
     private func setup() {
-        addSubview(separatorView)
+        wantsLayer = false
         addSubview(titleLabel)
 
         NSLayoutConstraint.activate([
-            separatorView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            separatorView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            separatorView.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            separatorView.heightAnchor.constraint(equalToConstant: 1),
-
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            titleLabel.topAnchor.constraint(equalTo: separatorView.bottomAnchor, constant: 6),
-            titleLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 1),
         ])
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Dark gradient background
+        let gradient = NSGradient(
+            starting: SnowLeopardColors.headerGradientTop,
+            ending: SnowLeopardColors.headerGradientBottom
+        )
+        gradient?.draw(in: bounds, angle: 270)
+
+        // Top highlight line
+        SnowLeopardColors.headerTopLine.setFill()
+        NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()
+
+        // Bottom shadow line
+        SnowLeopardColors.headerBottomLine.setFill()
+        NSRect(x: 0, y: 0, width: bounds.width, height: 1).fill()
     }
 }

@@ -5,6 +5,7 @@ enum PaneCategory: String, CaseIterable {
     case hardware = "Hardware"
     case internetWireless = "Internet & Wireless"
     case system = "System"
+    case other = "Other"
 }
 
 protocol PaneProtocol: AnyObject {
