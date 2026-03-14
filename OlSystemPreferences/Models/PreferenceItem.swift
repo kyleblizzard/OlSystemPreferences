@@ -61,8 +61,7 @@ struct PreferenceItem {
         if let bundleId = appBundleIdentifier {
             AppDetector.openAppPreferences(bundleIdentifier: bundleId)
         } else {
-            guard let url = URL(string: "x-apple.systempreferences:\(settingsURL)") else { return }
-            NSWorkspace.shared.open(url)
+            SystemSettingsLauncher.open(url: settingsURL)
         }
     }
 }
@@ -147,6 +146,15 @@ extension PreferenceItem {
             category: .personal,
             settingsURL: "com.apple.Siri-Settings.extension",
             keywords: ["siri", "spotlight", "search", "apple intelligence"]
+        ),
+        PreferenceItem(
+            id: "exposespaces",
+            title: "Exposé & Spaces",
+            sfSymbol: "rectangle.3.group",
+            iconColor: .systemBlue,
+            category: .personal,
+            settingsURL: "com.apple.Desktop-Settings.extension",
+            keywords: ["expose", "spaces", "hot corner", "mission control", "desktop"]
         ),
     ]
 

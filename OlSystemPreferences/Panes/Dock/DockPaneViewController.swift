@@ -2,116 +2,223 @@ import Cocoa
 
 class DockPaneViewController: NSViewController, PaneProtocol {
 
+    // MARK: - PaneProtocol
+
     var paneIdentifier: String { "dock" }
-    var paneTitle: String { "Dock & Menu Bar" }
+    var paneTitle: String { "Dock" }
     var paneIcon: NSImage {
         NSImage(systemSymbolName: "dock.rectangle", accessibilityDescription: "Dock") ?? NSImage()
     }
     var paneCategory: PaneCategory { .personal }
-    var preferredPaneSize: NSSize { NSSize(width: 668, height: 480) }
+    var preferredPaneSize: NSSize { NSSize(width: 668, height: 600) }
     var searchKeywords: [String] { ["dock", "menu bar", "size", "magnification", "autohide", "minimize", "position", "recent"] }
     var viewController: NSViewController { self }
+    var settingsURL: String { "com.apple.Desktop-Settings.extension" }
+
+    // MARK: - Services
 
     private let dock = DockService.shared
+    private let dockPreview = DockPreviewView(frame: NSRect(x: 0, y: 0, width: 300, height: 80))
 
     // MARK: - Controls
 
-    private let sizeSlider = NSSlider(value: 48, minValue: 16, maxValue: 128, target: nil, action: nil)
-    private let sizeLabel = NSTextField(labelWithString: "Size:")
-    private let smallLabel = NSTextField(labelWithString: "Small")
-    private let largeLabel = NSTextField(labelWithString: "Large")
+    private let sizeSlider = AquaSlider(minValue: 16, maxValue: 128, value: 48)
+    private let magCheckbox = AquaCheckbox(title: "Magnification")
+    private let magSlider = AquaSlider(minValue: 16, maxValue: 128, value: 64)
 
-    private let magnificationCheck = NSButton(checkboxWithTitle: "Magnification", target: nil, action: nil)
-    private let magSlider = NSSlider(value: 64, minValue: 16, maxValue: 128, target: nil, action: nil)
+    private let leftRadio = AquaRadioButton(title: "Left")
+    private let bottomRadio = AquaRadioButton(title: "Bottom")
+    private let rightRadio = AquaRadioButton(title: "Right")
+    private let effectPopup = AquaPopUpButton(items: ["Genie effect", "Scale effect"])
 
-    private let positionLabel = NSTextField(labelWithString: "Position on screen:")
-    private let leftButton = NSButton(radioButtonWithTitle: "Left", target: nil, action: nil)
-    private let bottomButton = NSButton(radioButtonWithTitle: "Bottom", target: nil, action: nil)
-    private let rightButton = NSButton(radioButtonWithTitle: "Right", target: nil, action: nil)
+    private let minimizeToAppCheck = AquaCheckbox(title: "Minimize windows into application icon")
+    private let animateCheck = AquaCheckbox(title: "Animate opening applications")
+    private let autohideCheck = AquaCheckbox(title: "Automatically hide and show the Dock")
+    private let indicatorsCheck = AquaCheckbox(title: "Show indicators for open applications")
+    private let showRecentsCheck = AquaCheckbox(title: "Show recent applications in Dock")
 
-    private let effectLabel = NSTextField(labelWithString: "Minimize windows using:")
-    private let effectPopup = NSPopUpButton()
+    // Keep a reference to the scroll view wrapping the outer stack
+    private var scrollView: NSScrollView!
 
-    private let minimizeToAppCheck = NSButton(checkboxWithTitle: "Minimize windows into application icon", target: nil, action: nil)
-    private let animateCheck = NSButton(checkboxWithTitle: "Animate opening applications", target: nil, action: nil)
-    private let autohideCheck = NSButton(checkboxWithTitle: "Automatically hide and show the Dock", target: nil, action: nil)
-    private let indicatorsCheck = NSButton(checkboxWithTitle: "Show indicators for open applications", target: nil, action: nil)
-    private let showRecentsCheck = NSButton(checkboxWithTitle: "Show recent applications in Dock", target: nil, action: nil)
+    // MARK: - Load View
 
     override func loadView() {
-        view = NSView()
+        let root = NSView()
+        root.translatesAutoresizingMaskIntoConstraints = false
+        view = root
 
-        let stackView = NSStackView()
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.orientation = .vertical
-        stackView.alignment = .leading
-        stackView.spacing = 12
-        stackView.edgeInsets = NSEdgeInsets(top: 20, left: 40, bottom: 20, right: 40)
+        // Outer vertical stack
+        let outerStack = NSStackView()
+        outerStack.translatesAutoresizingMaskIntoConstraints = false
+        outerStack.orientation = .vertical
+        outerStack.alignment = .leading
+        outerStack.spacing = 16
+        outerStack.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
 
-        // Size row
-        sizeSlider.target = self; sizeSlider.action = #selector(sizeChanged(_:))
+        // --- Header ---
+        let header = SnowLeopardPaneHelper.makePaneHeader(
+            icon: paneIcon,
+            title: paneTitle,
+            settingsURL: settingsURL
+        )
+        outerStack.addArrangedSubview(header)
+        header.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+
+        // =====================================================================
+        // Section 1: Dock Size & Magnification
+        // =====================================================================
+        let sizeBox = SnowLeopardPaneHelper.makeSectionBox(title: "Dock Size & Magnification")
+        let sizeStack = NSStackView()
+        sizeStack.translatesAutoresizingMaskIntoConstraints = false
+        sizeStack.orientation = .vertical
+        sizeStack.alignment = .leading
+        sizeStack.spacing = 10
+        sizeStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+
+        // Dock preview
+        dockPreview.translatesAutoresizingMaskIntoConstraints = false
+        dockPreview.wantsLayer = true
+        dockPreview.layer?.backgroundColor = NSColor(white: 0.12, alpha: 1.0).cgColor
+        dockPreview.layer?.cornerRadius = 8
+        let previewContainer = NSStackView(views: [dockPreview])
+        previewContainer.alignment = .centerX
+        dockPreview.widthAnchor.constraint(equalToConstant: 300).isActive = true
+        dockPreview.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        sizeStack.addArrangedSubview(previewContainer)
+        previewContainer.widthAnchor.constraint(equalTo: sizeStack.widthAnchor, constant: -16).isActive = true
+
+        // Size slider row
+        sizeSlider.target = self
+        sizeSlider.action = #selector(sizeChanged(_:))
         sizeSlider.isContinuous = true
-        smallLabel.font = NSFont.systemFont(ofSize: 10)
-        largeLabel.font = NSFont.systemFont(ofSize: 10)
+        sizeSlider.widthAnchor.constraint(equalToConstant: 280).isActive = true
 
+        let smallLabel = SnowLeopardPaneHelper.makeLabel("Small", size: 10)
+        let largeLabel = SnowLeopardPaneHelper.makeLabel("Large", size: 10)
+        let sizeLabel = SnowLeopardPaneHelper.makeLabel("Size:")
+        sizeLabel.alignment = .right
+        sizeLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true
         let sizeRow = NSStackView(views: [sizeLabel, smallLabel, sizeSlider, largeLabel])
-        sizeRow.spacing = 8
-        sizeSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
+        sizeRow.spacing = 6
+        sizeRow.alignment = .firstBaseline
+        sizeStack.addArrangedSubview(sizeRow)
 
         // Magnification row
-        magnificationCheck.target = self; magnificationCheck.action = #selector(magnificationToggled(_:))
-        magSlider.target = self; magSlider.action = #selector(magSizeChanged(_:))
+        magCheckbox.target = self
+        magCheckbox.action = #selector(magnificationToggled(_:))
+
+        magSlider.target = self
+        magSlider.action = #selector(magSizeChanged(_:))
         magSlider.isContinuous = true
-        let magSmall = NSTextField(labelWithString: "Small")
-        magSmall.font = NSFont.systemFont(ofSize: 10)
-        let magLarge = NSTextField(labelWithString: "Large")
-        magLarge.font = NSFont.systemFont(ofSize: 10)
-        let magRow = NSStackView(views: [magnificationCheck, magSmall, magSlider, magLarge])
-        magRow.spacing = 8
-        magSlider.widthAnchor.constraint(equalToConstant: 250).isActive = true
+        magSlider.widthAnchor.constraint(equalToConstant: 220).isActive = true
 
-        // Position row
-        leftButton.target = self; leftButton.action = #selector(positionChanged(_:))
-        bottomButton.target = self; bottomButton.action = #selector(positionChanged(_:))
-        rightButton.target = self; rightButton.action = #selector(positionChanged(_:))
-        let posRow = NSStackView(views: [positionLabel, leftButton, bottomButton, rightButton])
-        posRow.spacing = 12
+        let magSmallLabel = SnowLeopardPaneHelper.makeLabel("Small", size: 10)
+        let magLargeLabel = SnowLeopardPaneHelper.makeLabel("Large", size: 10)
+        let magLabel = SnowLeopardPaneHelper.makeLabel("")
+        magLabel.alignment = .right
+        magLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true
+        // Place the checkbox in label position
+        let magRow = NSStackView(views: [magCheckbox, magSmallLabel, magSlider, magLargeLabel])
+        magRow.spacing = 6
+        magRow.alignment = .firstBaseline
 
-        // Effect row
-        effectPopup.addItems(withTitles: ["Genie effect", "Scale effect"])
-        effectPopup.target = self; effectPopup.action = #selector(effectChanged(_:))
-        let effectRow = NSStackView(views: [effectLabel, effectPopup])
-        effectRow.spacing = 12
+        // Indent magnification row to align with size controls
+        let magIndent = NSStackView(views: [magLabel, magRow])
+        magIndent.spacing = 0
+        // Actually, just use the checkbox row directly
+        let magRowFinal = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel(""),
+            controls: [magCheckbox, magSmallLabel, magSlider, magLargeLabel],
+            spacing: 6
+        )
+        sizeStack.addArrangedSubview(magRowFinal)
 
-        // Checkboxes
-        minimizeToAppCheck.target = self; minimizeToAppCheck.action = #selector(checkboxChanged(_:))
-        animateCheck.target = self; animateCheck.action = #selector(checkboxChanged(_:))
-        autohideCheck.target = self; autohideCheck.action = #selector(checkboxChanged(_:))
-        indicatorsCheck.target = self; indicatorsCheck.action = #selector(checkboxChanged(_:))
-        showRecentsCheck.target = self; showRecentsCheck.action = #selector(checkboxChanged(_:))
+        sizeBox.contentView = sizeStack
+        outerStack.addArrangedSubview(sizeBox)
+        sizeBox.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
 
-        let separator = NSBox()
-        separator.boxType = .separator
-        separator.widthAnchor.constraint(equalToConstant: 580).isActive = true
+        // =====================================================================
+        // Section 2: Position & Effects
+        // =====================================================================
+        let posBox = SnowLeopardPaneHelper.makeSectionBox(title: "Position & Effects")
+        let posStack = NSStackView()
+        posStack.translatesAutoresizingMaskIntoConstraints = false
+        posStack.orientation = .vertical
+        posStack.alignment = .leading
+        posStack.spacing = 10
+        posStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
 
-        stackView.addArrangedSubview(sizeRow)
-        stackView.addArrangedSubview(magRow)
-        stackView.addArrangedSubview(separator)
-        stackView.addArrangedSubview(posRow)
-        stackView.addArrangedSubview(effectRow)
-        stackView.addArrangedSubview(makeSeparator())
-        stackView.addArrangedSubview(minimizeToAppCheck)
-        stackView.addArrangedSubview(animateCheck)
-        stackView.addArrangedSubview(autohideCheck)
-        stackView.addArrangedSubview(indicatorsCheck)
-        stackView.addArrangedSubview(showRecentsCheck)
+        // Position radio buttons — same groupTag so they auto-deselect
+        leftRadio.groupTag = 1
+        bottomRadio.groupTag = 1
+        rightRadio.groupTag = 1
+        leftRadio.target = self; leftRadio.action = #selector(positionChanged(_:))
+        bottomRadio.target = self; bottomRadio.action = #selector(positionChanged(_:))
+        rightRadio.target = self; rightRadio.action = #selector(positionChanged(_:))
 
-        view.addSubview(stackView)
+        let posRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Position on screen:"),
+            controls: [leftRadio, bottomRadio, rightRadio]
+        )
+        posStack.addArrangedSubview(posRow)
+
+        // Minimize effect popup
+        effectPopup.target = self
+        effectPopup.action = #selector(effectChanged(_:))
+
+        let effectRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Minimize using:"),
+            controls: [effectPopup]
+        )
+        posStack.addArrangedSubview(effectRow)
+
+        posBox.contentView = posStack
+        outerStack.addArrangedSubview(posBox)
+        posBox.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+
+        // =====================================================================
+        // Section 3: Options
+        // =====================================================================
+        let optBox = SnowLeopardPaneHelper.makeSectionBox(title: "Options")
+        let optStack = NSStackView()
+        optStack.translatesAutoresizingMaskIntoConstraints = false
+        optStack.orientation = .vertical
+        optStack.alignment = .leading
+        optStack.spacing = 6
+        optStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+
+        let allChecks: [AquaCheckbox] = [minimizeToAppCheck, animateCheck, autohideCheck, indicatorsCheck, showRecentsCheck]
+        for check in allChecks {
+            check.target = self
+            check.action = #selector(checkboxChanged(_:))
+            // Indent checkboxes to align with other sections' controls
+            let row = SnowLeopardPaneHelper.makeRow(
+                label: SnowLeopardPaneHelper.makeLabel(""),
+                controls: [check]
+            )
+            optStack.addArrangedSubview(row)
+        }
+
+        optBox.contentView = optStack
+        outerStack.addArrangedSubview(optBox)
+        optBox.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+
+        // Embed in scroll view for safety
+        let sv = NSScrollView()
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        sv.documentView = outerStack
+        sv.hasVerticalScroller = true
+        sv.drawsBackground = false
+        scrollView = sv
+
+        root.addSubview(sv)
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: view.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor),
+            sv.topAnchor.constraint(equalTo: root.topAnchor),
+            sv.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            sv.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            sv.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+
+            outerStack.widthAnchor.constraint(equalTo: sv.widthAnchor),
         ])
     }
 
@@ -123,76 +230,81 @@ class DockPaneViewController: NSViewController, PaneProtocol {
     // MARK: - PaneProtocol
 
     func reloadFromSystem() {
-        sizeSlider.integerValue = dock.tileSize
-        magnificationCheck.state = dock.magnification ? .on : .off
-        magSlider.integerValue = dock.largeSize
+        sizeSlider.doubleValue = Double(dock.tileSize)
+        magCheckbox.isChecked = dock.magnification
+        magSlider.doubleValue = Double(dock.largeSize)
         magSlider.isEnabled = dock.magnification
 
         switch dock.orientation {
         case "left":
-            leftButton.state = .on; bottomButton.state = .off; rightButton.state = .off
+            leftRadio.isSelected = true; bottomRadio.isSelected = false; rightRadio.isSelected = false
         case "right":
-            leftButton.state = .off; bottomButton.state = .off; rightButton.state = .on
+            leftRadio.isSelected = false; bottomRadio.isSelected = false; rightRadio.isSelected = true
         default:
-            leftButton.state = .off; bottomButton.state = .on; rightButton.state = .off
+            leftRadio.isSelected = false; bottomRadio.isSelected = true; rightRadio.isSelected = false
         }
 
-        effectPopup.selectItem(at: dock.minimizeEffect == "scale" ? 1 : 0)
-        minimizeToAppCheck.state = dock.minimizeToApplication ? .on : .off
-        animateCheck.state = dock.launchAnimation ? .on : .off
-        autohideCheck.state = dock.autohide ? .on : .off
-        indicatorsCheck.state = dock.showProcessIndicators ? .on : .off
-        showRecentsCheck.state = dock.showRecents ? .on : .off
+        effectPopup.selectedIndex = dock.minimizeEffect == "scale" ? 1 : 0
+        minimizeToAppCheck.isChecked = dock.minimizeToApplication
+        animateCheck.isChecked = dock.launchAnimation
+        autohideCheck.isChecked = dock.autohide
+        indicatorsCheck.isChecked = dock.showProcessIndicators
+        showRecentsCheck.isChecked = dock.showRecents
+
+        // Sync preview
+        dockPreview.dockSize = CGFloat(dock.tileSize)
+        dockPreview.magnificationEnabled = dock.magnification
+        dockPreview.magnificationSize = CGFloat(dock.largeSize)
+        dockPreview.position = dock.orientation
+        dockPreview.showIndicators = dock.showProcessIndicators
     }
 
     // MARK: - Actions
 
-    @objc private func sizeChanged(_ sender: NSSlider) {
-        dock.tileSize = sender.integerValue
+    @objc private func sizeChanged(_ sender: AquaSlider) {
+        dock.tileSize = Int(sender.doubleValue)
+        dockPreview.dockSize = CGFloat(Int(sender.doubleValue))
     }
 
-    @objc private func magnificationToggled(_ sender: NSButton) {
-        dock.magnification = sender.state == .on
-        magSlider.isEnabled = sender.state == .on
+    @objc private func magnificationToggled(_ sender: AquaCheckbox) {
+        dock.magnification = sender.isChecked
+        magSlider.isEnabled = sender.isChecked
+        dockPreview.magnificationEnabled = sender.isChecked
     }
 
-    @objc private func magSizeChanged(_ sender: NSSlider) {
-        dock.largeSize = sender.integerValue
+    @objc private func magSizeChanged(_ sender: AquaSlider) {
+        dock.largeSize = Int(sender.doubleValue)
+        dockPreview.magnificationSize = CGFloat(Int(sender.doubleValue))
     }
 
-    @objc private func positionChanged(_ sender: NSButton) {
-        if sender === leftButton {
+    @objc private func positionChanged(_ sender: AquaRadioButton) {
+        if sender === leftRadio {
             dock.orientation = "left"
-            bottomButton.state = .off; rightButton.state = .off
-        } else if sender === bottomButton {
+            dockPreview.position = "left"
+        } else if sender === bottomRadio {
             dock.orientation = "bottom"
-            leftButton.state = .off; rightButton.state = .off
+            dockPreview.position = "bottom"
         } else {
             dock.orientation = "right"
-            leftButton.state = .off; bottomButton.state = .off
+            dockPreview.position = "right"
         }
     }
 
-    @objc private func effectChanged(_ sender: NSPopUpButton) {
-        dock.minimizeEffect = sender.indexOfSelectedItem == 1 ? "scale" : "genie"
+    @objc private func effectChanged(_ sender: AquaPopUpButton) {
+        dock.minimizeEffect = sender.selectedIndex == 1 ? "scale" : "genie"
     }
 
-    @objc private func checkboxChanged(_ sender: NSButton) {
-        let on = sender.state == .on
+    @objc private func checkboxChanged(_ sender: AquaCheckbox) {
+        let on = sender.isChecked
         switch sender {
         case minimizeToAppCheck: dock.minimizeToApplication = on
         case animateCheck: dock.launchAnimation = on
         case autohideCheck: dock.autohide = on
-        case indicatorsCheck: dock.showProcessIndicators = on
+        case indicatorsCheck:
+            dock.showProcessIndicators = on
+            dockPreview.showIndicators = on
         case showRecentsCheck: dock.showRecents = on
         default: break
         }
-    }
-
-    private func makeSeparator() -> NSView {
-        let sep = NSBox()
-        sep.boxType = .separator
-        sep.widthAnchor.constraint(equalToConstant: 580).isActive = true
-        return sep
     }
 }

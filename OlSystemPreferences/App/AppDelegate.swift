@@ -3,8 +3,11 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     var mainWindowController: MainWindowController?
+    private lazy var aboutWindowController = AboutWindowController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UserDefaults.standard.register(defaults: ["ClassicSoundsEnabled": true])
+
         setupMainMenu()
 
         mainWindowController = MainWindowController()
@@ -17,6 +20,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             NSApp.activate(ignoringOtherApps: true)
         }
+
+        SoundService.playStartup()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -25,6 +30,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         return true
+    }
+
+    // MARK: - Actions
+
+    @objc private func showAbout(_ sender: Any?) {
+        aboutWindowController.showWindow(nil)
+        aboutWindowController.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func showDashboard(_ sender: Any?) {
+        mainWindowController?.toggleDashboard(nil)
+    }
+
+    @objc private func viewAsIcons(_ sender: Any?) {
+        mainWindowController?.switchToGrid()
+    }
+
+    @objc private func viewAsCoverFlow(_ sender: Any?) {
+        mainWindowController?.switchToCoverFlow()
     }
 
     // MARK: - Menu Bar
@@ -38,7 +62,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenu = NSMenu()
         appMenuItem.submenu = appMenu
 
-        appMenu.addItem(withTitle: "About System Preferences", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About System Preferences", action: #selector(showAbout(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
 
         let hideItem = NSMenuItem(title: "Hide System Preferences", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
@@ -59,6 +83,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        // View menu (F1, F5)
+        let viewMenuItem = NSMenuItem()
+        mainMenu.addItem(viewMenuItem)
+        let viewMenu = NSMenu(title: "View")
+        viewMenuItem.submenu = viewMenu
+
+        let iconsItem = NSMenuItem(title: "as Icons", action: #selector(viewAsIcons(_:)), keyEquivalent: "1")
+        viewMenu.addItem(iconsItem)
+        let coverFlowItem = NSMenuItem(title: "as Cover Flow", action: #selector(viewAsCoverFlow(_:)), keyEquivalent: "2")
+        viewMenu.addItem(coverFlowItem)
+        viewMenu.addItem(NSMenuItem.separator())
+        let dashboardItem = NSMenuItem(title: "Dashboard", action: #selector(showDashboard(_:)), keyEquivalent: "")
+        dashboardItem.keyEquivalent = String(UnicodeScalar(NSF4FunctionKey)!)
+        dashboardItem.keyEquivalentModifierMask = []
+        viewMenu.addItem(dashboardItem)
 
         // Window menu
         let windowMenuItem = NSMenuItem()

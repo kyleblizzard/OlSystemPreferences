@@ -20,6 +20,8 @@ targets:
       - path: OlSystemPreferences
         excludes:
           - "**/.DS_Store"
+    dependencies:
+      - framework: /System/Library/Frameworks/ScreenSaver.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.olsystempreferences.app

@@ -2,139 +2,86 @@ import Cocoa
 
 class MouseTrackpadPaneViewController: NSViewController, PaneProtocol {
 
+    // MARK: - PaneProtocol
+
     var paneIdentifier: String { "mousetrackpad" }
     var paneTitle: String { "Mouse & Trackpad" }
     var paneIcon: NSImage {
         NSImage(systemSymbolName: "computermouse", accessibilityDescription: "Mouse & Trackpad") ?? NSImage()
     }
     var paneCategory: PaneCategory { .hardware }
-    var preferredPaneSize: NSSize { NSSize(width: 668, height: 480) }
-    var searchKeywords: [String] { ["mouse", "trackpad", "scroll", "tracking speed", "tap", "click", "gesture", "natural"] }
+    var preferredPaneSize: NSSize { NSSize(width: 668, height: 500) }
+    var searchKeywords: [String] { ["mouse", "trackpad", "scroll", "tracking speed", "tap", "click", "gesture", "natural", "double-click", "dragging"] }
     var viewController: NSViewController { self }
+    var settingsURL: String { "com.apple.Mouse-Settings.extension" }
+
+    // MARK: - Services
 
     private let defaults = DefaultsService.shared
     private let trackpadDomain = "com.apple.AppleMultitouchTrackpad"
+    private let btTrackpadDomain = "com.apple.driver.AppleBluetoothMultitouch.trackpad"
 
-    private let tabView = NSTabView()
+    // MARK: - Tab view
 
-    // MARK: - Mouse controls
-    private let mouseSpeedSlider = NSSlider(value: 1, minValue: 0, maxValue: 3, target: nil, action: nil)
-    private let mouseScrollCheck = NSButton(checkboxWithTitle: "Natural scrolling", target: nil, action: nil)
+    private let tabView = AquaTabView()
 
-    // MARK: - Trackpad controls
-    private let trackpadSpeedSlider = NSSlider(value: 1, minValue: 0, maxValue: 3, target: nil, action: nil)
-    private let tapToClickCheck = NSButton(checkboxWithTitle: "Tap to click", target: nil, action: nil)
-    private let naturalScrollCheck = NSButton(checkboxWithTitle: "Natural scrolling", target: nil, action: nil)
-    private let forceClickCheck = NSButton(checkboxWithTitle: "Force Click and haptic feedback", target: nil, action: nil)
-    private let secondaryClickCheck = NSButton(checkboxWithTitle: "Secondary click (two-finger click)", target: nil, action: nil)
+    // MARK: - Mouse tab controls
+
+    private let mouseTrackingSlider = AquaSlider(minValue: 0, maxValue: 3, value: 1)
+    private let mouseDoubleClickSlider = AquaSlider(minValue: 0, maxValue: 1.5, value: 0.5)
+    private let mouseScrollSpeedSlider = AquaSlider(minValue: 0, maxValue: 3, value: 1)
+    private let primaryButtonLeftRadio = AquaRadioButton(title: "Left", isSelected: true)
+    private let primaryButtonRightRadio = AquaRadioButton(title: "Right", isSelected: false)
+
+    // MARK: - Trackpad tab controls
+
+    private let trackpadTrackingSlider = AquaSlider(minValue: 0, maxValue: 3, value: 1)
+    private let clickingCheck = AquaCheckbox(title: "Clicking (tap to click)", isChecked: false)
+    private let draggingCheck = AquaCheckbox(title: "Dragging (three-finger drag)", isChecked: false)
+    private let secondaryClickCheck = AquaCheckbox(title: "Secondary Click (two-finger click or tap)", isChecked: false)
+    private let naturalScrollCheck = AquaCheckbox(title: "Scroll direction: natural", isChecked: true)
+
+    // MARK: - Lifecycle
 
     override func loadView() {
         view = NSView()
+        view.wantsLayer = true
+
+        let outerStack = NSStackView()
+        outerStack.translatesAutoresizingMaskIntoConstraints = false
+        outerStack.orientation = .vertical
+        outerStack.alignment = .leading
+        outerStack.spacing = 12
+
+        // Pane header
+        let header = SnowLeopardPaneHelper.makePaneHeader(
+            icon: paneIcon,
+            title: paneTitle,
+            settingsURL: settingsURL
+        )
+        header.widthAnchor.constraint(equalToConstant: 620).isActive = true
+        outerStack.addArrangedSubview(header)
+
+        // Separator below header
+        outerStack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 620))
+
+        // Tab view
         tabView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Mouse tab
-        let mouseTab = NSTabViewItem(identifier: "mouse")
-        mouseTab.label = "Mouse"
-        mouseTab.view = createMouseTab()
+        tabView.addTab(title: "Mouse", view: createMouseTab())
+        tabView.addTab(title: "Trackpad", view: createTrackpadTab())
+        tabView.selectTab(at: 0)
 
-        // Trackpad tab
-        let trackpadTab = NSTabViewItem(identifier: "trackpad")
-        trackpadTab.label = "Trackpad"
-        trackpadTab.view = createTrackpadTab()
+        outerStack.addArrangedSubview(tabView)
 
-        tabView.addTabViewItem(mouseTab)
-        tabView.addTabViewItem(trackpadTab)
-
-        view.addSubview(tabView)
+        view.addSubview(outerStack)
         NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: view.topAnchor, constant: 12),
-            tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            outerStack.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
+            outerStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            outerStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            tabView.widthAnchor.constraint(equalToConstant: 620),
+            tabView.heightAnchor.constraint(equalToConstant: 380),
         ])
-    }
-
-    private func createMouseTab() -> NSView {
-        let container = NSView()
-        let stack = NSStackView()
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 14
-        stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
-
-        let speedLabel = NSTextField(labelWithString: "Tracking speed:")
-        mouseSpeedSlider.target = self; mouseSpeedSlider.action = #selector(mouseSpeedChanged(_:))
-        mouseSpeedSlider.isContinuous = false
-        mouseSpeedSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        let slowLabel = NSTextField(labelWithString: "Slow")
-        slowLabel.font = NSFont.systemFont(ofSize: 10)
-        let fastLabel = NSTextField(labelWithString: "Fast")
-        fastLabel.font = NSFont.systemFont(ofSize: 10)
-        let speedRow = NSStackView(views: [speedLabel, slowLabel, mouseSpeedSlider, fastLabel])
-        speedRow.spacing = 8
-
-        mouseScrollCheck.target = self; mouseScrollCheck.action = #selector(mouseScrollChanged(_:))
-
-        stack.addArrangedSubview(speedRow)
-        stack.addArrangedSubview(mouseScrollCheck)
-
-        container.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-        ])
-        return container
-    }
-
-    private func createTrackpadTab() -> NSView {
-        let container = NSView()
-        let stack = NSStackView()
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 14
-        stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
-
-        let speedLabel = NSTextField(labelWithString: "Tracking speed:")
-        trackpadSpeedSlider.target = self; trackpadSpeedSlider.action = #selector(trackpadSpeedChanged(_:))
-        trackpadSpeedSlider.isContinuous = false
-        trackpadSpeedSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        let slowLabel = NSTextField(labelWithString: "Slow")
-        slowLabel.font = NSFont.systemFont(ofSize: 10)
-        let fastLabel = NSTextField(labelWithString: "Fast")
-        fastLabel.font = NSFont.systemFont(ofSize: 10)
-        let speedRow = NSStackView(views: [speedLabel, slowLabel, trackpadSpeedSlider, fastLabel])
-        speedRow.spacing = 8
-
-        let sep = NSBox()
-        sep.boxType = .separator
-        sep.widthAnchor.constraint(equalToConstant: 540).isActive = true
-
-        let gesturesLabel = NSTextField(labelWithString: "Point & Click:")
-        gesturesLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-
-        tapToClickCheck.target = self; tapToClickCheck.action = #selector(trackpadOptionChanged(_:))
-        naturalScrollCheck.target = self; naturalScrollCheck.action = #selector(trackpadOptionChanged(_:))
-        forceClickCheck.target = self; forceClickCheck.action = #selector(trackpadOptionChanged(_:))
-        secondaryClickCheck.target = self; secondaryClickCheck.action = #selector(trackpadOptionChanged(_:))
-
-        stack.addArrangedSubview(speedRow)
-        stack.addArrangedSubview(sep)
-        stack.addArrangedSubview(gesturesLabel)
-        stack.addArrangedSubview(tapToClickCheck)
-        stack.addArrangedSubview(secondaryClickCheck)
-        stack.addArrangedSubview(forceClickCheck)
-        stack.addArrangedSubview(naturalScrollCheck)
-
-        container.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-        ])
-        return container
     }
 
     override func viewDidLoad() {
@@ -142,58 +89,279 @@ class MouseTrackpadPaneViewController: NSViewController, PaneProtocol {
         reloadFromSystem()
     }
 
-    func reloadFromSystem() {
-        // Mouse
-        if let speed = defaults.double(forKey: "com.apple.mouse.scaling") {
-            mouseSpeedSlider.doubleValue = speed
-        }
-        let naturalScroll = defaults.bool(forKey: "com.apple.swipescrolldirection") ?? true
-        mouseScrollCheck.state = naturalScroll ? .on : .off
-        naturalScrollCheck.state = naturalScroll ? .on : .off
+    // MARK: - Mouse Tab
 
-        // Trackpad
-        if let speed = defaults.double(forKey: "com.apple.trackpad.scaling") {
-            trackpadSpeedSlider.doubleValue = speed
-        }
-        let tapClick = defaults.bool(forKey: "Clicking", domain: trackpadDomain) ?? false
-        tapToClickCheck.state = tapClick ? .on : .off
+    private func createMouseTab() -> NSView {
+        let container = NSView()
 
-        let secondaryClick = defaults.bool(forKey: "TrackpadRightClick", domain: trackpadDomain) ?? true
-        secondaryClickCheck.state = secondaryClick ? .on : .off
+        let stack = NSStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 16
+        stack.edgeInsets = NSEdgeInsets(top: 16, left: 24, bottom: 16, right: 24)
 
-        let forceClick = defaults.bool(forKey: "com.apple.trackpad.forceClick") ?? true
-        forceClickCheck.state = forceClick ? .on : .off
+        // Tracking Speed
+        let trackingBox = SnowLeopardPaneHelper.makeSectionBox(title: "Tracking Speed")
+        let trackingContent = makeSliderRow(
+            slider: mouseTrackingSlider,
+            leftLabel: "Slow",
+            rightLabel: "Fast",
+            action: #selector(mouseTrackingChanged(_:))
+        )
+        trackingBox.contentView = trackingContent
+        trackingBox.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        stack.addArrangedSubview(trackingBox)
+
+        // Double-Click Speed
+        let doubleClickBox = SnowLeopardPaneHelper.makeSectionBox(title: "Double-Click Speed")
+        let doubleClickContent = makeSliderRow(
+            slider: mouseDoubleClickSlider,
+            leftLabel: "Slow",
+            rightLabel: "Fast",
+            action: #selector(mouseDoubleClickChanged(_:))
+        )
+        doubleClickBox.contentView = doubleClickContent
+        doubleClickBox.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        stack.addArrangedSubview(doubleClickBox)
+
+        // Scrolling Speed
+        let scrollBox = SnowLeopardPaneHelper.makeSectionBox(title: "Scrolling Speed")
+        let scrollContent = makeSliderRow(
+            slider: mouseScrollSpeedSlider,
+            leftLabel: "Slow",
+            rightLabel: "Fast",
+            action: #selector(mouseScrollSpeedChanged(_:))
+        )
+        scrollBox.contentView = scrollContent
+        scrollBox.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        stack.addArrangedSubview(scrollBox)
+
+        // Separator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+
+        // Primary mouse button
+        let primaryLabel = SnowLeopardPaneHelper.makeLabel("Primary mouse button:", size: 11, bold: true)
+
+        primaryButtonLeftRadio.groupTag = 1
+        primaryButtonLeftRadio.target = self
+        primaryButtonLeftRadio.action = #selector(primaryButtonChanged(_:))
+
+        primaryButtonRightRadio.groupTag = 1
+        primaryButtonRightRadio.target = self
+        primaryButtonRightRadio.action = #selector(primaryButtonChanged(_:))
+
+        let radioRow = NSStackView(views: [primaryButtonLeftRadio, primaryButtonRightRadio])
+        radioRow.spacing = 20
+
+        let primaryRow = SnowLeopardPaneHelper.makeRow(
+            label: primaryLabel,
+            controls: [radioRow],
+            spacing: 12
+        )
+        stack.addArrangedSubview(primaryRow)
+
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: container.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
+        ])
+        return container
     }
 
-    // MARK: - Actions
+    // MARK: - Trackpad Tab
 
-    @objc private func mouseSpeedChanged(_ sender: NSSlider) {
+    private func createTrackpadTab() -> NSView {
+        let container = NSView()
+
+        let stack = NSStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 16
+        stack.edgeInsets = NSEdgeInsets(top: 16, left: 24, bottom: 16, right: 24)
+
+        // Tracking Speed
+        let trackingBox = SnowLeopardPaneHelper.makeSectionBox(title: "Tracking Speed")
+        let trackingContent = makeSliderRow(
+            slider: trackpadTrackingSlider,
+            leftLabel: "Slow",
+            rightLabel: "Fast",
+            action: #selector(trackpadTrackingChanged(_:))
+        )
+        trackingBox.contentView = trackingContent
+        trackingBox.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        stack.addArrangedSubview(trackingBox)
+
+        // Separator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+
+        // Checkboxes section
+        let gesturesLabel = SnowLeopardPaneHelper.makeLabel("Point & Click", size: 11, bold: true)
+        stack.addArrangedSubview(gesturesLabel)
+
+        clickingCheck.target = self
+        clickingCheck.action = #selector(trackpadOptionChanged(_:))
+        stack.addArrangedSubview(clickingCheck)
+
+        draggingCheck.target = self
+        draggingCheck.action = #selector(trackpadOptionChanged(_:))
+        stack.addArrangedSubview(draggingCheck)
+
+        secondaryClickCheck.target = self
+        secondaryClickCheck.action = #selector(trackpadOptionChanged(_:))
+        stack.addArrangedSubview(secondaryClickCheck)
+
+        // Separator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+
+        // Scroll direction
+        let scrollLabel = SnowLeopardPaneHelper.makeLabel("Scrolling", size: 11, bold: true)
+        stack.addArrangedSubview(scrollLabel)
+
+        naturalScrollCheck.target = self
+        naturalScrollCheck.action = #selector(trackpadOptionChanged(_:))
+        stack.addArrangedSubview(naturalScrollCheck)
+
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: container.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
+        ])
+        return container
+    }
+
+    // MARK: - Slider Row Helper
+
+    private func makeSliderRow(slider: AquaSlider, leftLabel: String, rightLabel: String, action: Selector) -> NSView {
+        let content = NSView()
+        content.translatesAutoresizingMaskIntoConstraints = false
+
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        slider.numberOfTickMarks = 10
+        slider.allowsTickMarkValuesOnly = false
+        slider.isContinuous = false
+        slider.target = self
+        slider.action = action
+
+        let slow = SnowLeopardPaneHelper.makeLabel(leftLabel, size: 10)
+        slow.translatesAutoresizingMaskIntoConstraints = false
+        let fast = SnowLeopardPaneHelper.makeLabel(rightLabel, size: 10)
+        fast.translatesAutoresizingMaskIntoConstraints = false
+
+        content.addSubview(slow)
+        content.addSubview(slider)
+        content.addSubview(fast)
+
+        NSLayoutConstraint.activate([
+            content.heightAnchor.constraint(equalToConstant: 36),
+
+            slow.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
+            slow.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+
+            slider.leadingAnchor.constraint(equalTo: slow.trailingAnchor, constant: 8),
+            slider.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+            slider.widthAnchor.constraint(equalToConstant: 380),
+
+            fast.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 8),
+            fast.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+            fast.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
+        ])
+
+        return content
+    }
+
+    // MARK: - Reload
+
+    func reloadFromSystem() {
+        // Mouse tracking speed
+        if let speed = defaults.double(forKey: "com.apple.mouse.scaling") {
+            mouseTrackingSlider.doubleValue = speed
+        }
+
+        // Mouse double-click threshold
+        if let threshold = defaults.double(forKey: "com.apple.mouse.doubleClickThreshold") {
+            mouseDoubleClickSlider.doubleValue = threshold
+        }
+
+        // Natural scroll (shared between mouse and trackpad)
+        let naturalScroll = defaults.bool(forKey: "com.apple.swipescrolldirection") ?? true
+        naturalScrollCheck.isChecked = naturalScroll
+
+        // Primary mouse button (left = false, right = true for com.apple.mouse.swapLeftRightButton)
+        // Default is left
+        primaryButtonLeftRadio.isSelected = true
+        primaryButtonRightRadio.isSelected = false
+
+        // Trackpad tracking speed
+        if let speed = defaults.double(forKey: "com.apple.trackpad.scaling") {
+            trackpadTrackingSlider.doubleValue = speed
+        }
+
+        // Tap to click
+        let tapClick = defaults.bool(forKey: "Clicking", domain: trackpadDomain) ?? false
+        clickingCheck.isChecked = tapClick
+
+        // Three-finger drag
+        let threeDrag = defaults.bool(forKey: "TrackpadThreeFingerDrag", domain: trackpadDomain) ?? false
+        draggingCheck.isChecked = threeDrag
+
+        // Secondary click (two-finger)
+        let secondaryClick = defaults.bool(forKey: "TrackpadRightClick", domain: trackpadDomain) ?? true
+        secondaryClickCheck.isChecked = secondaryClick
+    }
+
+    // MARK: - Mouse Actions
+
+    @objc private func mouseTrackingChanged(_ sender: AquaSlider) {
         defaults.setDouble(sender.doubleValue, forKey: "com.apple.mouse.scaling")
     }
 
-    @objc private func mouseScrollChanged(_ sender: NSButton) {
-        defaults.setBool(sender.state == .on, forKey: "com.apple.swipescrolldirection")
+    @objc private func mouseDoubleClickChanged(_ sender: AquaSlider) {
+        defaults.setDouble(sender.doubleValue, forKey: "com.apple.mouse.doubleClickThreshold")
     }
 
-    @objc private func trackpadSpeedChanged(_ sender: NSSlider) {
+    @objc private func mouseScrollSpeedChanged(_ sender: AquaSlider) {
+        // Scroll speed is tied to the tracking speed scaling on modern macOS
+        defaults.setDouble(sender.doubleValue, forKey: "com.apple.mouse.scaling")
+    }
+
+    @objc private func primaryButtonChanged(_ sender: AquaRadioButton) {
+        if sender === primaryButtonLeftRadio {
+            primaryButtonLeftRadio.isSelected = true
+            primaryButtonRightRadio.isSelected = false
+        } else {
+            primaryButtonLeftRadio.isSelected = false
+            primaryButtonRightRadio.isSelected = true
+        }
+    }
+
+    // MARK: - Trackpad Actions
+
+    @objc private func trackpadTrackingChanged(_ sender: AquaSlider) {
         defaults.setDouble(sender.doubleValue, forKey: "com.apple.trackpad.scaling")
     }
 
-    @objc private func trackpadOptionChanged(_ sender: NSButton) {
-        let on = sender.state == .on
+    @objc private func trackpadOptionChanged(_ sender: AquaCheckbox) {
+        let on = sender.isChecked
         switch sender {
-        case tapToClickCheck:
+        case clickingCheck:
             defaults.setBool(on, forKey: "Clicking", domain: trackpadDomain)
-            defaults.setBool(on, forKey: "Clicking", domain: "com.apple.driver.AppleBluetoothMultitouch.trackpad")
+            defaults.setBool(on, forKey: "Clicking", domain: btTrackpadDomain)
+        case draggingCheck:
+            defaults.setBool(on, forKey: "TrackpadThreeFingerDrag", domain: trackpadDomain)
+            defaults.setBool(on, forKey: "TrackpadThreeFingerDrag", domain: btTrackpadDomain)
         case secondaryClickCheck:
             defaults.setBool(on, forKey: "TrackpadRightClick", domain: trackpadDomain)
-            defaults.setBool(on, forKey: "TrackpadRightClick", domain: "com.apple.driver.AppleBluetoothMultitouch.trackpad")
-        case forceClickCheck:
-            defaults.setBool(on, forKey: "com.apple.trackpad.forceClick")
+            defaults.setBool(on, forKey: "TrackpadRightClick", domain: btTrackpadDomain)
         case naturalScrollCheck:
             defaults.setBool(on, forKey: "com.apple.swipescrolldirection")
-            mouseScrollCheck.state = sender.state
-        default: break
+        default:
+            break
         }
     }
 }

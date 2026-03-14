@@ -3,25 +3,32 @@ import Cocoa
 class GeneralPaneViewController: NSViewController, PaneProtocol {
 
     var paneIdentifier: String { "general" }
-    var paneTitle: String { "General" }
+    var paneTitle: String { "Appearance" }
     var paneIcon: NSImage {
-        NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General") ?? NSImage()
+        NSImage(systemSymbolName: "paintbrush.fill", accessibilityDescription: "Appearance") ?? NSImage()
     }
     var paneCategory: PaneCategory { .personal }
-    var preferredPaneSize: NSSize { NSSize(width: 668, height: 500) }
+    var preferredPaneSize: NSSize { NSSize(width: 668, height: 520) }
     var searchKeywords: [String] { ["appearance", "dark mode", "light mode", "accent", "highlight", "scroll", "sidebar"] }
     var viewController: NSViewController { self }
+    var settingsURL: String { "com.apple.systempreferences.GeneralSettings" }
 
     private let defaults = DefaultsService.shared
 
     // MARK: - UI Elements
 
+    // Appearance (maps to Light / Dark / Auto)
     private let appearanceLabel = NSTextField(labelWithString: "Appearance:")
-    private let lightButton = NSButton(radioButtonWithTitle: "Light", target: nil, action: nil)
-    private let darkButton = NSButton(radioButtonWithTitle: "Dark", target: nil, action: nil)
-    private let autoButton = NSButton(radioButtonWithTitle: "Auto", target: nil, action: nil)
+    private let blueButton = NSButton(radioButtonWithTitle: "Blue", target: nil, action: nil)
+    private let graphiteButton = NSButton(radioButtonWithTitle: "Graphite", target: nil, action: nil)
 
-    private let accentColorLabel = NSTextField(labelWithString: "Accent color:")
+    // Modern mapping: Blue = Light, Graphite = Dark, plus Auto
+    private let lightButton = AquaRadioButton(title: "Light", isSelected: false)
+    private let darkButton = AquaRadioButton(title: "Dark", isSelected: false)
+    private let autoButton = AquaRadioButton(title: "Auto", isSelected: false)
+
+    // Accent color (Highlight color in Snow Leopard)
+    private let highlightColorLabel = NSTextField(labelWithString: "Highlight color:")
     private let accentColorButtons: [NSButton] = {
         let colors: [(String, NSColor)] = [
             ("Blue", .systemBlue),
@@ -47,76 +54,232 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         }
     }()
 
-    private let scrollBarsLabel = NSTextField(labelWithString: "Show scroll bars:")
-    private let scrollBarsPopup = NSPopUpButton()
+    // Scroll arrows placement (Snow Leopard: Together / At top and bottom)
+    // Maps to modern: Show scroll bars popup
+    private let scrollBarsLabel = NSTextField(labelWithString: "Place scroll arrows:")
+    private let scrollBarsPopup = AquaPopUpButton(items: [
+        "Automatically based on mouse or trackpad",
+        "When scrolling",
+        "Always"
+    ], selectedIndex: 0)
 
+    // Click in scroll bar
     private let scrollClickLabel = NSTextField(labelWithString: "Click in the scroll bar to:")
-    private let jumpToSpotButton = NSButton(radioButtonWithTitle: "Jump to the spot that's clicked", target: nil, action: nil)
-    private let jumpToPageButton = NSButton(radioButtonWithTitle: "Jump to the next page", target: nil, action: nil)
+    private let jumpToPageButton = AquaRadioButton(title: "Jump to the next page", isSelected: false)
+    private let jumpToSpotButton = AquaRadioButton(title: "Jump to the spot that's clicked", isSelected: false)
 
+    // Use smooth scrolling (Snow Leopard checkbox)
+    private let smoothScrollingCheck = AquaCheckbox(title: "Use smooth scrolling", isChecked: false)
+
+    // Minimize when double-clicking title bar
+    private let doubleClickTitleBarCheck = AquaCheckbox(title: "Minimize when double clicking a window title bar", isChecked: false)
+
+    // Sidebar icon size (Number of Recent Items equivalent)
     private let sidebarSizeLabel = NSTextField(labelWithString: "Sidebar icon size:")
-    private let sidebarSizePopup = NSPopUpButton()
+    private let sidebarSizePopup = AquaPopUpButton(items: ["Small", "Medium", "Large"], selectedIndex: 0)
+
+    // Number of Recent Items
+    private let recentItemsLabel = NSTextField(labelWithString: "Number of recent items:")
+    private let recentAppsPopup = AquaPopUpButton(items: [], selectedIndex: 0)
+    private let recentDocsPopup = AquaPopUpButton(items: [], selectedIndex: 0)
+    private let recentServersPopup = AquaPopUpButton(items: [], selectedIndex: 0)
+    private let recentItemValues = ["0", "5", "10", "15", "20", "30", "50"]
 
     override func loadView() {
         view = NSView()
         view.translatesAutoresizingMaskIntoConstraints = false
 
-        let stackView = NSStackView()
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.orientation = .vertical
-        stackView.alignment = .leading
-        stackView.spacing = 16
-        stackView.edgeInsets = NSEdgeInsets(top: 20, left: 40, bottom: 20, right: 40)
+        // Main vertical stack
+        let mainStack = NSStackView()
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        mainStack.orientation = .vertical
+        mainStack.alignment = .leading
+        mainStack.spacing = 0
+        mainStack.edgeInsets = NSEdgeInsets(top: 16, left: 20, bottom: 20, right: 20)
 
-        // Appearance row
-        let appearanceRow = makeRow(label: appearanceLabel, controls: [lightButton, darkButton, autoButton])
+        // --- Pane Header ---
+        let header = SnowLeopardPaneHelper.makePaneHeader(
+            icon: paneIcon,
+            title: paneTitle,
+            settingsURL: settingsURL
+        )
+        mainStack.addArrangedSubview(header)
+        header.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -40).isActive = true
+        mainStack.setCustomSpacing(12, after: header)
+
+        // --- Separator after header ---
+        let headerSep = SnowLeopardPaneHelper.makeSeparator(width: 620)
+        mainStack.addArrangedSubview(headerSep)
+        mainStack.setCustomSpacing(16, after: headerSep)
+
+        // ===== Section 1: Appearance =====
+        let appearanceBox = SnowLeopardPaneHelper.makeSectionBox()
+        let appearanceContent = NSStackView()
+        appearanceContent.translatesAutoresizingMaskIntoConstraints = false
+        appearanceContent.orientation = .vertical
+        appearanceContent.alignment = .leading
+        appearanceContent.spacing = 10
+
+        // Appearance row (Light / Dark / Auto)
+        styleAllLabels()
+        lightButton.groupTag = 1
+        darkButton.groupTag = 1
+        autoButton.groupTag = 1
         lightButton.target = self; lightButton.action = #selector(appearanceChanged(_:))
         darkButton.target = self; darkButton.action = #selector(appearanceChanged(_:))
         autoButton.target = self; autoButton.action = #selector(appearanceChanged(_:))
+        let appearanceRow = SnowLeopardPaneHelper.makeRow(
+            label: appearanceLabel,
+            controls: [lightButton, darkButton, autoButton]
+        )
+        appearanceContent.addArrangedSubview(appearanceRow)
 
-        // Accent color row
-        let accentRow = NSStackView()
-        accentRow.orientation = .horizontal
-        accentRow.spacing = 8
-        accentRow.addArrangedSubview(accentColorLabel)
+        // Highlight (Accent) color row
+        let accentRow = SnowLeopardPaneHelper.makeRow(
+            label: highlightColorLabel,
+            controls: accentColorButtons,
+            spacing: 6
+        )
         for (index, btn) in accentColorButtons.enumerated() {
             btn.tag = index
             btn.target = self
             btn.action = #selector(accentColorChanged(_:))
-            accentRow.addArrangedSubview(btn)
         }
+        appearanceContent.addArrangedSubview(accentRow)
 
-        // Scroll bars
-        scrollBarsPopup.addItems(withTitles: ["Automatically based on mouse or trackpad", "When scrolling", "Always"])
+        appearanceBox.contentView = appearanceContent
+        mainStack.addArrangedSubview(appearanceBox)
+        appearanceBox.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -40).isActive = true
+        mainStack.setCustomSpacing(12, after: appearanceBox)
+
+        // ===== Section 2: Scroll Bars =====
+        let scrollBox = SnowLeopardPaneHelper.makeSectionBox()
+        let scrollContent = NSStackView()
+        scrollContent.translatesAutoresizingMaskIntoConstraints = false
+        scrollContent.orientation = .vertical
+        scrollContent.alignment = .leading
+        scrollContent.spacing = 10
+
+        // Show scroll bars popup
         scrollBarsPopup.target = self
         scrollBarsPopup.action = #selector(scrollBarsChanged(_:))
-        let scrollRow = makeRow(label: scrollBarsLabel, controls: [scrollBarsPopup])
+        let scrollRow = SnowLeopardPaneHelper.makeRow(
+            label: scrollBarsLabel,
+            controls: [scrollBarsPopup]
+        )
+        scrollContent.addArrangedSubview(scrollRow)
 
-        // Scroll click
-        jumpToSpotButton.target = self; jumpToSpotButton.action = #selector(scrollClickChanged(_:))
+        // Separator within scroll section
+        let scrollInnerSep = SnowLeopardPaneHelper.makeSeparator(width: 560)
+        scrollContent.addArrangedSubview(scrollInnerSep)
+
+        // Click in scroll bar
+        let scrollClickColumn = NSStackView()
+        scrollClickColumn.orientation = .vertical
+        scrollClickColumn.alignment = .leading
+        scrollClickColumn.spacing = 4
+        jumpToPageButton.groupTag = 2
+        jumpToSpotButton.groupTag = 2
+        scrollClickColumn.addArrangedSubview(jumpToPageButton)
+        scrollClickColumn.addArrangedSubview(jumpToSpotButton)
         jumpToPageButton.target = self; jumpToPageButton.action = #selector(scrollClickChanged(_:))
-        let scrollClickRow = makeRow(label: scrollClickLabel, controls: [jumpToSpotButton, jumpToPageButton])
+        jumpToSpotButton.target = self; jumpToSpotButton.action = #selector(scrollClickChanged(_:))
 
-        // Sidebar size
-        sidebarSizePopup.addItems(withTitles: ["Small", "Medium", "Large"])
+        let scrollClickRow = SnowLeopardPaneHelper.makeRow(
+            label: scrollClickLabel,
+            controls: [scrollClickColumn]
+        )
+        scrollContent.addArrangedSubview(scrollClickRow)
+
+        // Separator
+        let scrollInnerSep2 = SnowLeopardPaneHelper.makeSeparator(width: 560)
+        scrollContent.addArrangedSubview(scrollInnerSep2)
+
+        // Smooth scrolling checkbox
+        smoothScrollingCheck.target = self
+        smoothScrollingCheck.action = #selector(smoothScrollingChanged(_:))
+        let smoothRow = SnowLeopardPaneHelper.makeRow(
+            label: NSTextField(labelWithString: ""),
+            controls: [smoothScrollingCheck]
+        )
+        scrollContent.addArrangedSubview(smoothRow)
+
+        scrollBox.contentView = scrollContent
+        mainStack.addArrangedSubview(scrollBox)
+        scrollBox.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -40).isActive = true
+        mainStack.setCustomSpacing(12, after: scrollBox)
+
+        // ===== Section 3: Window Behavior =====
+        let windowBox = SnowLeopardPaneHelper.makeSectionBox()
+        let windowContent = NSStackView()
+        windowContent.translatesAutoresizingMaskIntoConstraints = false
+        windowContent.orientation = .vertical
+        windowContent.alignment = .leading
+        windowContent.spacing = 10
+
+        // Double-click title bar checkbox
+        doubleClickTitleBarCheck.target = self
+        doubleClickTitleBarCheck.action = #selector(doubleClickTitleBarChanged(_:))
+        let dblClickRow = SnowLeopardPaneHelper.makeRow(
+            label: NSTextField(labelWithString: ""),
+            controls: [doubleClickTitleBarCheck]
+        )
+        windowContent.addArrangedSubview(dblClickRow)
+
+        // Separator
+        let windowSep = SnowLeopardPaneHelper.makeSeparator(width: 560)
+        windowContent.addArrangedSubview(windowSep)
+
+        // Sidebar icon size
         sidebarSizePopup.target = self
         sidebarSizePopup.action = #selector(sidebarSizeChanged(_:))
-        let sidebarRow = makeRow(label: sidebarSizeLabel, controls: [sidebarSizePopup])
+        let sidebarRow = SnowLeopardPaneHelper.makeRow(
+            label: sidebarSizeLabel,
+            controls: [sidebarSizePopup]
+        )
+        windowContent.addArrangedSubview(sidebarRow)
 
-        stackView.addArrangedSubview(appearanceRow)
-        stackView.addArrangedSubview(accentRow)
-        stackView.addArrangedSubview(makeSeparator())
-        stackView.addArrangedSubview(scrollRow)
-        stackView.addArrangedSubview(scrollClickRow)
-        stackView.addArrangedSubview(makeSeparator())
-        stackView.addArrangedSubview(sidebarRow)
+        windowBox.contentView = windowContent
+        mainStack.addArrangedSubview(windowBox)
+        windowBox.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -40).isActive = true
+        mainStack.setCustomSpacing(12, after: windowBox)
 
-        view.addSubview(stackView)
+        // ===== Section 4: Number of Recent Items =====
+        let recentBox = SnowLeopardPaneHelper.makeSectionBox()
+        let recentContent = NSStackView()
+        recentContent.translatesAutoresizingMaskIntoConstraints = false
+        recentContent.orientation = .vertical
+        recentContent.alignment = .leading
+        recentContent.spacing = 8
+
+        let recentPopups: [(AquaPopUpButton, String)] = [
+            (recentAppsPopup, "Applications"),
+            (recentDocsPopup, "Documents"),
+            (recentServersPopup, "Servers"),
+        ]
+        for (popup, suffix) in recentPopups {
+            popup.items = recentItemValues.map { "\($0) \(suffix)" }
+            popup.target = self
+            popup.action = #selector(recentItemsChanged(_:))
+        }
+
+        let recentRow = SnowLeopardPaneHelper.makeRow(
+            label: recentItemsLabel,
+            controls: [recentAppsPopup, recentDocsPopup, recentServersPopup],
+            spacing: 8
+        )
+        recentContent.addArrangedSubview(recentRow)
+
+        recentBox.contentView = recentContent
+        mainStack.addArrangedSubview(recentBox)
+        recentBox.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -40).isActive = true
+
+        view.addSubview(mainStack)
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: view.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor),
+            mainStack.topAnchor.constraint(equalTo: view.topAnchor),
+            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            mainStack.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor),
         ])
     }
 
@@ -128,18 +291,20 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
     // MARK: - PaneProtocol
 
     func reloadFromSystem() {
-        // Appearance
+        // Appearance (Light / Dark / Auto)
         let style = defaults.string(forKey: "AppleInterfaceStyle")
-        if style == "Dark" {
-            darkButton.state = .on
+        let autoSwitch = defaults.bool(forKey: "AppleInterfaceStyleSwitchesAutomatically") ?? false
+
+        lightButton.isSelected = false
+        darkButton.isSelected = false
+        autoButton.isSelected = false
+
+        if autoSwitch {
+            autoButton.isSelected = true
+        } else if style == "Dark" {
+            darkButton.isSelected = true
         } else {
-            lightButton.state = .on
-        }
-        // Auto detection: if AppleInterfaceStyleSwitchesAutomatically is true
-        if defaults.bool(forKey: "AppleInterfaceStyleSwitchesAutomatically") == true {
-            autoButton.state = .on
-            lightButton.state = .off
-            darkButton.state = .off
+            lightButton.isSelected = true
         }
 
         // Accent color
@@ -157,38 +322,81 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         // Scroll bars
         let scrollMode = defaults.string(forKey: "AppleShowScrollBars") ?? "Automatic"
         switch scrollMode {
-        case "Automatic": scrollBarsPopup.selectItem(at: 0)
-        case "WhenScrolling": scrollBarsPopup.selectItem(at: 1)
-        case "Always": scrollBarsPopup.selectItem(at: 2)
-        default: scrollBarsPopup.selectItem(at: 0)
+        case "Automatic": scrollBarsPopup.selectedIndex = 0
+        case "WhenScrolling": scrollBarsPopup.selectedIndex = 1
+        case "Always": scrollBarsPopup.selectedIndex = 2
+        default: scrollBarsPopup.selectedIndex = 0
         }
 
         // Scroll click behavior
         let pagingBehavior = defaults.bool(forKey: "AppleScrollerPagingBehavior") ?? true
-        jumpToSpotButton.state = pagingBehavior ? .off : .on
-        jumpToPageButton.state = pagingBehavior ? .on : .off
+        jumpToSpotButton.isSelected = pagingBehavior ? false : true
+        jumpToPageButton.isSelected = pagingBehavior ? true : false
+
+        // Smooth scrolling
+        let smoothScrolling = defaults.bool(forKey: "NSScrollAnimationEnabled") ?? true
+        smoothScrollingCheck.isChecked = smoothScrolling
+
+        // Double-click title bar to minimize
+        let doubleClickMinimize = defaults.string(forKey: "AppleActionOnDoubleClick") ?? "Maximize"
+        doubleClickTitleBarCheck.isChecked = (doubleClickMinimize == "Minimize")
 
         // Sidebar size
         let sidebarSize = defaults.integer(forKey: "NSTableViewDefaultSizeMode") ?? 2
-        sidebarSizePopup.selectItem(at: max(0, sidebarSize - 1))
+        sidebarSizePopup.selectedIndex = max(0, sidebarSize - 1)
+
+        // Recent items — read from com.apple.recentitems domain
+        loadRecentItemsCount()
+    }
+
+    private func loadRecentItemsCount() {
+        // These values are stored in a nested plist structure; use defaults command for reliability
+        let categories: [(AquaPopUpButton, String)] = [
+            (recentAppsPopup, "RecentApplications"),
+            (recentDocsPopup, "RecentDocuments"),
+            (recentServersPopup, "RecentServers"),
+        ]
+        for (popup, key) in categories {
+            let process = Process()
+            let pipe = Pipe()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            process.arguments = ["read", "com.apple.recentitems", key]
+            process.standardOutput = pipe
+            process.standardError = Pipe()
+            try? process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8),
+               let match = output.range(of: "MaxAmount = (\\d+)", options: .regularExpression) {
+                let numStr = output[match].components(separatedBy: " ").last ?? "10"
+                if let idx = recentItemValues.firstIndex(of: numStr) {
+                    popup.selectedIndex = idx
+                    continue
+                }
+            }
+            // Default to 10
+            popup.selectedIndex = 2
+        }
     }
 
     // MARK: - Actions
 
-    @objc private func appearanceChanged(_ sender: NSButton) {
+    @objc private func appearanceChanged(_ sender: AquaRadioButton) {
         if sender === lightButton {
             defaults.set(nil, forKey: "AppleInterfaceStyle")
             defaults.setBool(false, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            darkButton.state = .off; autoButton.state = .off
+            darkButton.isSelected = false; autoButton.isSelected = false
         } else if sender === darkButton {
             defaults.setString("Dark", forKey: "AppleInterfaceStyle")
             defaults.setBool(false, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            lightButton.state = .off; autoButton.state = .off
+            lightButton.isSelected = false; autoButton.isSelected = false
         } else if sender === autoButton {
             defaults.setBool(true, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            lightButton.state = .off; darkButton.state = .off
+            lightButton.isSelected = false; darkButton.isSelected = false
         }
-        DistributedNotificationCenter.default().post(name: .init("AppleInterfaceThemeChangedNotification"), object: nil)
+        DistributedNotificationCenter.default().post(
+            name: .init("AppleInterfaceThemeChangedNotification"), object: nil
+        )
     }
 
     @objc private func accentColorChanged(_ sender: NSButton) {
@@ -200,48 +408,66 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         sender.layer?.borderWidth = 2
         sender.layer?.borderColor = NSColor.white.cgColor
 
-        DistributedNotificationCenter.default().post(name: .init("AppleColorPreferencesChangedNotification"), object: nil)
+        DistributedNotificationCenter.default().post(
+            name: .init("AppleColorPreferencesChangedNotification"), object: nil
+        )
     }
 
-    @objc private func scrollBarsChanged(_ sender: NSPopUpButton) {
+    @objc private func scrollBarsChanged(_ sender: AquaPopUpButton) {
         let values = ["Automatic", "WhenScrolling", "Always"]
-        defaults.setString(values[sender.indexOfSelectedItem], forKey: "AppleShowScrollBars")
+        defaults.setString(values[sender.selectedIndex], forKey: "AppleShowScrollBars")
     }
 
-    @objc private func scrollClickChanged(_ sender: NSButton) {
+    @objc private func scrollClickChanged(_ sender: AquaRadioButton) {
         if sender === jumpToSpotButton {
             defaults.setBool(false, forKey: "AppleScrollerPagingBehavior")
-            jumpToPageButton.state = .off
+            jumpToPageButton.isSelected = false
         } else {
             defaults.setBool(true, forKey: "AppleScrollerPagingBehavior")
-            jumpToSpotButton.state = .off
+            jumpToSpotButton.isSelected = false
         }
     }
 
-    @objc private func sidebarSizeChanged(_ sender: NSPopUpButton) {
-        defaults.setInteger(sender.indexOfSelectedItem + 1, forKey: "NSTableViewDefaultSizeMode")
+    @objc private func smoothScrollingChanged(_ sender: AquaCheckbox) {
+        defaults.setBool(sender.isChecked, forKey: "NSScrollAnimationEnabled")
+    }
+
+    @objc private func doubleClickTitleBarChanged(_ sender: AquaCheckbox) {
+        let value = sender.isChecked ? "Minimize" : "Maximize"
+        defaults.setString(value, forKey: "AppleActionOnDoubleClick")
+    }
+
+    @objc private func sidebarSizeChanged(_ sender: AquaPopUpButton) {
+        defaults.setInteger(sender.selectedIndex + 1, forKey: "NSTableViewDefaultSizeMode")
+    }
+
+    @objc private func recentItemsChanged(_ sender: AquaPopUpButton) {
+        let value = recentItemValues[sender.selectedIndex]
+        let key: String
+        if sender === recentAppsPopup {
+            key = "RecentApplications"
+        } else if sender === recentDocsPopup {
+            key = "RecentDocuments"
+        } else {
+            key = "RecentServers"
+        }
+        // Write via defaults command since it's a nested plist structure
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        process.arguments = ["write", "com.apple.recentitems", key, "-dict", "MaxAmount", "-int", value]
+        process.standardError = Pipe()
+        try? process.run()
+        process.waitUntilExit()
     }
 
     // MARK: - Helpers
 
-    private func makeRow(label: NSTextField, controls: [NSView]) -> NSStackView {
-        let row = NSStackView()
-        row.orientation = .horizontal
-        row.spacing = 12
-        row.alignment = .firstBaseline
-        label.setContentHuggingPriority(.defaultHigh, for: .horizontal)
-        row.addArrangedSubview(label)
-        for control in controls {
-            row.addArrangedSubview(control)
+    private func styleAllLabels() {
+        let labels = [appearanceLabel, highlightColorLabel, scrollBarsLabel, scrollClickLabel, sidebarSizeLabel, recentItemsLabel]
+        for label in labels {
+            label.font = SnowLeopardFonts.label(size: 11)
+            label.textColor = NSColor(white: 0.15, alpha: 1.0)
+            label.alignment = .right
         }
-        return row
-    }
-
-    private func makeSeparator() -> NSView {
-        let sep = NSBox()
-        sep.boxType = .separator
-        sep.translatesAutoresizingMaskIntoConstraints = false
-        sep.widthAnchor.constraint(equalToConstant: 580).isActive = true
-        return sep
     }
 }

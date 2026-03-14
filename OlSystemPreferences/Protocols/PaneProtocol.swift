@@ -16,6 +16,7 @@ protocol PaneProtocol: AnyObject {
     var preferredPaneSize: NSSize { get }
     var searchKeywords: [String] { get }
     var viewController: NSViewController { get }
+    var settingsURL: String { get }
 
     func paneWillAppear()
     func paneWillDisappear()
@@ -25,4 +26,5 @@ protocol PaneProtocol: AnyObject {
 extension PaneProtocol {
     func paneWillAppear() {}
     func paneWillDisappear() {}
+    var settingsURL: String { "" }
 }

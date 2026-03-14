@@ -1,6 +1,9 @@
 import Cocoa
+import CoreAudio
 
 class SoundPaneViewController: NSViewController, PaneProtocol {
+
+    // MARK: - PaneProtocol
 
     var paneIdentifier: String { "sound" }
     var paneTitle: String { "Sound" }
@@ -8,101 +11,180 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
         NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Sound") ?? NSImage()
     }
     var paneCategory: PaneCategory { .hardware }
-    var preferredPaneSize: NSSize { NSSize(width: 668, height: 520) }
+    var preferredPaneSize: NSSize { NSSize(width: 668, height: 560) }
     var searchKeywords: [String] { ["sound", "volume", "audio", "speaker", "microphone", "input", "output", "mute", "alert"] }
     var viewController: NSViewController { self }
+    var settingsURL: String { "com.apple.Sound-Settings.extension" }
+
+    // MARK: - Services
 
     private let audio = AudioService.shared
     private let defaults = DefaultsService.shared
 
-    // MARK: - UI
+    // MARK: - Tabs
 
-    private let tabView = NSTabView()
+    private let tabView = AquaTabView()
 
-    // Output tab
+    // Sound Effects tab controls
+    private let alertSoundTable = NSTableView()
+    private let alertVolumeSlider = AquaSlider(minValue: 0, maxValue: 1, value: 0.5)
+    private let playSoundsCheck = AquaCheckbox(title: "Play user interface sound effects", isChecked: true)
+    private let volumeFeedbackCheck = AquaCheckbox(title: "Play feedback when volume is changed", isChecked: true)
+    private let effectsOutputVolumeSlider = AquaSlider(minValue: 0, maxValue: 1, value: 0.5)
+    private let effectsMuteCheck = AquaCheckbox(title: "Mute", isChecked: false)
+
+    // Output tab controls
     private let outputDeviceTable = NSTableView()
-    private let outputVolumeSlider = NSSlider(value: 0.5, minValue: 0, maxValue: 1, target: nil, action: nil)
-    private let muteCheck = NSButton(checkboxWithTitle: "Mute", target: nil, action: nil)
 
-    // Input tab
+    // Input tab controls
     private let inputDeviceTable = NSTableView()
+    private let inputLevelIndicator = NSLevelIndicator()
 
-    // Sound Effects tab
-    private let alertVolumeSlider = NSSlider(value: 0.5, minValue: 0, maxValue: 1, target: nil, action: nil)
-    private let playSoundsCheck = NSButton(checkboxWithTitle: "Play user interface sound effects", target: nil, action: nil)
-    private let volumeFeedbackCheck = NSButton(checkboxWithTitle: "Play feedback when volume is changed", target: nil, action: nil)
-
+    // Data
     private var outputDevices: [AudioService.AudioDevice] = []
     private var inputDevices: [AudioService.AudioDevice] = []
+    private var inputLevelTimer: Timer?
+
+    private let alertSounds = ["Basso", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Ping", "Pop", "Purr", "Sosumi", "Submarine", "Tink"]
+
+    // MARK: - Load View
 
     override func loadView() {
-        view = NSView()
+        let root = NSView()
+        root.translatesAutoresizingMaskIntoConstraints = false
+        view = root
 
+        // Outer stack with header + tab view
+        let outerStack = NSStackView()
+        outerStack.translatesAutoresizingMaskIntoConstraints = false
+        outerStack.orientation = .vertical
+        outerStack.alignment = .leading
+        outerStack.spacing = 12
+        outerStack.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
+
+        // --- Header ---
+        let header = SnowLeopardPaneHelper.makePaneHeader(
+            icon: paneIcon,
+            title: paneTitle,
+            settingsURL: settingsURL
+        )
+        outerStack.addArrangedSubview(header)
+        header.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+
+        // --- Tab View ---
         tabView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Output Tab
-        let outputTab = NSTabViewItem(identifier: "output")
-        outputTab.label = "Sound Effects"
-        outputTab.view = createOutputTab()
+        // Sound Effects tab
+        tabView.addTab(title: "Sound Effects", view: buildSoundEffectsTab())
 
-        // Input Tab
-        let inputTab = NSTabViewItem(identifier: "input")
-        inputTab.label = "Output"
-        inputTab.view = createOutputDeviceTab()
+        // Output tab
+        tabView.addTab(title: "Output", view: buildOutputTab())
 
-        // Effects Tab
-        let effectsTab = NSTabViewItem(identifier: "effects")
-        effectsTab.label = "Input"
-        effectsTab.view = createInputTab()
+        // Input tab
+        tabView.addTab(title: "Input", view: buildInputTab())
 
-        tabView.addTabViewItem(outputTab)
-        tabView.addTabViewItem(inputTab)
-        tabView.addTabViewItem(effectsTab)
+        tabView.selectTab(at: 0)
 
-        view.addSubview(tabView)
+        outerStack.addArrangedSubview(tabView)
+        tabView.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+        tabView.heightAnchor.constraint(greaterThanOrEqualToConstant: 420).isActive = true
+
+        root.addSubview(outerStack)
         NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: view.topAnchor, constant: 12),
-            tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            outerStack.topAnchor.constraint(equalTo: root.topAnchor),
+            outerStack.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            outerStack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            outerStack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor),
         ])
     }
 
-    private func createOutputTab() -> NSView {
+    // MARK: - Sound Effects Tab
+
+    private func buildSoundEffectsTab() -> NSView {
         let container = NSView()
         let stack = NSStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
 
-        // Alert volume
-        let alertLabel = NSTextField(labelWithString: "Alert volume:")
+        // Alert sound list
+        let alertLabel = SnowLeopardPaneHelper.makeLabel("Choose an alert sound:", size: 11, bold: true)
+        stack.addArrangedSubview(alertLabel)
+
+        let alertScroll = NSScrollView()
+        alertScroll.translatesAutoresizingMaskIntoConstraints = false
+        alertScroll.hasVerticalScroller = true
+        alertScroll.borderType = .bezelBorder
+
+        let nameCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
+        nameCol.title = "Name"
+        nameCol.width = 480
+        alertSoundTable.addTableColumn(nameCol)
+        alertSoundTable.headerView = nil
+        alertSoundTable.delegate = self
+        alertSoundTable.dataSource = self
+        alertSoundTable.tag = 3
+        alertSoundTable.rowHeight = 20
+        alertSoundTable.usesAlternatingRowBackgroundColors = true
+
+        alertScroll.documentView = alertSoundTable
+        alertScroll.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        alertScroll.heightAnchor.constraint(equalToConstant: 140).isActive = true
+        stack.addArrangedSubview(alertScroll)
+
+        // Alert volume slider
         alertVolumeSlider.target = self
         alertVolumeSlider.action = #selector(alertVolumeChanged(_:))
+        alertVolumeSlider.isContinuous = true
+        alertVolumeSlider.showsFillColor = true
         alertVolumeSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        let alertRow = NSStackView(views: [alertLabel, alertVolumeSlider])
-        alertRow.spacing = 12
 
-        // Sound effects
-        playSoundsCheck.target = self; playSoundsCheck.action = #selector(soundEffectsChanged(_:))
-        volumeFeedbackCheck.target = self; volumeFeedbackCheck.action = #selector(volumeFeedbackChanged(_:))
+        let alertVolRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Alert volume:"),
+            controls: [alertVolumeSlider]
+        )
+        stack.addArrangedSubview(alertVolRow)
 
-        // Output volume
-        let volLabel = NSTextField(labelWithString: "Output volume:")
-        outputVolumeSlider.target = self
-        outputVolumeSlider.action = #selector(outputVolumeChanged(_:))
-        outputVolumeSlider.isContinuous = true
-        outputVolumeSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        muteCheck.target = self; muteCheck.action = #selector(muteToggled(_:))
-        let volRow = NSStackView(views: [volLabel, outputVolumeSlider, muteCheck])
-        volRow.spacing = 12
+        // Separator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
 
-        stack.addArrangedSubview(alertRow)
-        stack.addArrangedSubview(playSoundsCheck)
-        stack.addArrangedSubview(volumeFeedbackCheck)
-        stack.addArrangedSubview(makeSeparator())
+        // Checkboxes
+        playSoundsCheck.target = self
+        playSoundsCheck.action = #selector(soundEffectsChanged(_:))
+
+        volumeFeedbackCheck.target = self
+        volumeFeedbackCheck.action = #selector(volumeFeedbackChanged(_:))
+
+        let checkRow1 = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel(""),
+            controls: [playSoundsCheck]
+        )
+        let checkRow2 = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel(""),
+            controls: [volumeFeedbackCheck]
+        )
+        stack.addArrangedSubview(checkRow1)
+        stack.addArrangedSubview(checkRow2)
+
+        // Separator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+
+        // Output volume + mute
+        effectsOutputVolumeSlider.target = self
+        effectsOutputVolumeSlider.action = #selector(outputVolumeChanged(_:))
+        effectsOutputVolumeSlider.isContinuous = true
+        effectsOutputVolumeSlider.showsFillColor = true
+        effectsOutputVolumeSlider.widthAnchor.constraint(equalToConstant: 260).isActive = true
+
+        effectsMuteCheck.target = self
+        effectsMuteCheck.action = #selector(muteToggled(_:))
+
+        let volRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Output volume:"),
+            controls: [effectsOutputVolumeSlider, effectsMuteCheck]
+        )
         stack.addArrangedSubview(volRow)
 
         container.addSubview(stack)
@@ -110,41 +192,50 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
             stack.topAnchor.constraint(equalTo: container.topAnchor),
             stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
         ])
         return container
     }
 
-    private func createOutputDeviceTab() -> NSView {
+    // MARK: - Output Tab
+
+    private func buildOutputTab() -> NSView {
         let container = NSView()
         let stack = NSStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
 
-        let label = NSTextField(labelWithString: "Select a device for sound output:")
-        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        let label = SnowLeopardPaneHelper.makeLabel("Select a device for sound output:", size: 11, bold: true)
+        stack.addArrangedSubview(label)
 
         let scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.hasVerticalScroller = true
-        scrollView.documentView = outputDeviceTable
+        scrollView.borderType = .bezelBorder
 
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
-        column.title = "Name"
-        column.width = 400
-        outputDeviceTable.addTableColumn(column)
-        outputDeviceTable.headerView = nil
+        let nameCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
+        nameCol.title = "Name"
+        nameCol.width = 360
+        outputDeviceTable.addTableColumn(nameCol)
+
+        let typeCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("type"))
+        typeCol.title = "Type"
+        typeCol.width = 180
+        outputDeviceTable.addTableColumn(typeCol)
+
         outputDeviceTable.delegate = self
         outputDeviceTable.dataSource = self
         outputDeviceTable.tag = 1
-        outputDeviceTable.rowHeight = 24
+        outputDeviceTable.rowHeight = 22
+        outputDeviceTable.usesAlternatingRowBackgroundColors = true
+        outputDeviceTable.headerView?.tableView?.font = SnowLeopardFonts.label(size: 11)
 
-        scrollView.widthAnchor.constraint(equalToConstant: 580).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 200).isActive = true
-
-        stack.addArrangedSubview(label)
+        scrollView.documentView = outputDeviceTable
+        scrollView.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: 280).isActive = true
         stack.addArrangedSubview(scrollView)
 
         container.addSubview(stack)
@@ -152,63 +243,123 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
             stack.topAnchor.constraint(equalTo: container.topAnchor),
             stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
         ])
         return container
     }
 
-    private func createInputTab() -> NSView {
+    // MARK: - Input Tab
+
+    private func buildInputTab() -> NSView {
         let container = NSView()
         let stack = NSStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
 
-        let label = NSTextField(labelWithString: "Select a device for sound input:")
-        label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        let label = SnowLeopardPaneHelper.makeLabel("Select a device for sound input:", size: 11, bold: true)
+        stack.addArrangedSubview(label)
 
         let scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.hasVerticalScroller = true
-        scrollView.documentView = inputDeviceTable
+        scrollView.borderType = .bezelBorder
 
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
-        column.title = "Name"
-        column.width = 400
-        inputDeviceTable.addTableColumn(column)
-        inputDeviceTable.headerView = nil
+        let nameCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
+        nameCol.title = "Name"
+        nameCol.width = 360
+        inputDeviceTable.addTableColumn(nameCol)
+
+        let typeCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("type"))
+        typeCol.title = "Type"
+        typeCol.width = 180
+        inputDeviceTable.addTableColumn(typeCol)
+
         inputDeviceTable.delegate = self
         inputDeviceTable.dataSource = self
         inputDeviceTable.tag = 2
-        inputDeviceTable.rowHeight = 24
+        inputDeviceTable.rowHeight = 22
+        inputDeviceTable.usesAlternatingRowBackgroundColors = true
 
-        scrollView.widthAnchor.constraint(equalToConstant: 580).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 200).isActive = true
-
-        stack.addArrangedSubview(label)
+        scrollView.documentView = inputDeviceTable
+        scrollView.widthAnchor.constraint(equalToConstant: 560).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: 220).isActive = true
         stack.addArrangedSubview(scrollView)
+
+        // Input level indicator
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+
+        inputLevelIndicator.minValue = 0
+        inputLevelIndicator.maxValue = 1.0
+        inputLevelIndicator.warningValue = 0.8
+        inputLevelIndicator.criticalValue = 0.95
+        inputLevelIndicator.levelIndicatorStyle = .continuousCapacity
+        inputLevelIndicator.widthAnchor.constraint(equalToConstant: 300).isActive = true
+
+        let levelRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Input level:"),
+            controls: [inputLevelIndicator]
+        )
+        stack.addArrangedSubview(levelRow)
 
         container.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: container.topAnchor),
             stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor),
         ])
         return container
     }
+
+    // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         reloadFromSystem()
+        startInputLevelTimer()
     }
+
+    func paneWillAppear() {
+        reloadFromSystem()
+        startInputLevelTimer()
+    }
+
+    func paneWillDisappear() {
+        inputLevelTimer?.invalidate()
+        inputLevelTimer = nil
+    }
+
+    private func startInputLevelTimer() {
+        inputLevelTimer?.invalidate()
+        inputLevelTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            // Read input level from the default input device via HAL
+            guard let inputID = self.audio.getDefaultInputDeviceID() else { return }
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyVolumeScalar,
+                mScope: kAudioDevicePropertyScopeInput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var level: Float32 = 0
+            var size = UInt32(MemoryLayout<Float32>.size)
+            let status = AudioObjectGetPropertyData(inputID, &address, 0, nil, &size, &level)
+            if status == noErr {
+                self.inputLevelIndicator.doubleValue = Double(level)
+            }
+        }
+    }
+
+    // MARK: - PaneProtocol
 
     func reloadFromSystem() {
         // Volume
         if let vol = audio.getOutputVolume() {
-            outputVolumeSlider.floatValue = vol
+            effectsOutputVolumeSlider.doubleValue = Double(vol)
         }
-        muteCheck.state = (audio.isMuted() ?? false) ? .on : .off
+        effectsMuteCheck.isChecked = audio.isMuted() ?? false
 
         // Devices
         outputDevices = audio.getOutputDevices()
@@ -216,55 +367,49 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
         outputDeviceTable.reloadData()
         inputDeviceTable.reloadData()
 
-        // Select current devices
+        // Select current output device
         if let currentOutput = audio.getDefaultOutputDeviceID() {
             if let idx = outputDevices.firstIndex(where: { $0.id == currentOutput }) {
                 outputDeviceTable.selectRowIndexes(IndexSet(integer: idx), byExtendingSelection: false)
             }
         }
+        // Select current input device
         if let currentInput = audio.getDefaultInputDeviceID() {
             if let idx = inputDevices.firstIndex(where: { $0.id == currentInput }) {
                 inputDeviceTable.selectRowIndexes(IndexSet(integer: idx), byExtendingSelection: false)
             }
         }
 
-        // Sound effects
+        // Sound effects prefs
         let uiSounds = defaults.bool(forKey: "com.apple.sound.uiaudio.enabled") ?? true
-        playSoundsCheck.state = uiSounds ? .on : .off
+        playSoundsCheck.isChecked = uiSounds
         let feedback = defaults.bool(forKey: "com.apple.sound.beep.feedback") ?? true
-        volumeFeedbackCheck.state = feedback ? .on : .off
+        volumeFeedbackCheck.isChecked = feedback
 
         let alertVol = defaults.float(forKey: "com.apple.sound.beep.volume") ?? 0.5
-        alertVolumeSlider.floatValue = alertVol
+        alertVolumeSlider.doubleValue = Double(alertVol)
     }
 
     // MARK: - Actions
 
-    @objc private func outputVolumeChanged(_ sender: NSSlider) {
-        audio.setOutputVolume(sender.floatValue)
+    @objc private func outputVolumeChanged(_ sender: AquaSlider) {
+        audio.setOutputVolume(Float(sender.doubleValue))
     }
 
-    @objc private func muteToggled(_ sender: NSButton) {
-        audio.setMuted(sender.state == .on)
+    @objc private func muteToggled(_ sender: AquaCheckbox) {
+        audio.setMuted(sender.isChecked)
     }
 
-    @objc private func alertVolumeChanged(_ sender: NSSlider) {
-        defaults.setFloat(sender.floatValue, forKey: "com.apple.sound.beep.volume")
+    @objc private func alertVolumeChanged(_ sender: AquaSlider) {
+        defaults.setFloat(Float(sender.doubleValue), forKey: "com.apple.sound.beep.volume")
     }
 
-    @objc private func soundEffectsChanged(_ sender: NSButton) {
-        defaults.setBool(sender.state == .on, forKey: "com.apple.sound.uiaudio.enabled")
+    @objc private func soundEffectsChanged(_ sender: AquaCheckbox) {
+        defaults.setBool(sender.isChecked, forKey: "com.apple.sound.uiaudio.enabled")
     }
 
-    @objc private func volumeFeedbackChanged(_ sender: NSButton) {
-        defaults.setBool(sender.state == .on, forKey: "com.apple.sound.beep.feedback")
-    }
-
-    private func makeSeparator() -> NSView {
-        let sep = NSBox()
-        sep.boxType = .separator
-        sep.widthAnchor.constraint(equalToConstant: 560).isActive = true
-        return sep
+    @objc private func volumeFeedbackChanged(_ sender: AquaCheckbox) {
+        defaults.setBool(sender.isChecked, forKey: "com.apple.sound.beep.feedback")
     }
 }
 
@@ -273,14 +418,56 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
 extension SoundPaneViewController: NSTableViewDataSource, NSTableViewDelegate {
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        return tableView.tag == 1 ? outputDevices.count : inputDevices.count
+        switch tableView.tag {
+        case 1: return outputDevices.count
+        case 2: return inputDevices.count
+        case 3: return alertSounds.count
+        default: return 0
+        }
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let device = tableView.tag == 1 ? outputDevices[row] : inputDevices[row]
-        let cell = NSTextField(labelWithString: device.name)
-        cell.font = NSFont.systemFont(ofSize: 13)
-        return cell
+        let colID = tableColumn?.identifier.rawValue ?? ""
+
+        switch tableView.tag {
+        case 1:
+            // Output devices
+            let device = outputDevices[row]
+            if colID == "name" {
+                let cell = NSTextField(labelWithString: device.name)
+                cell.font = SnowLeopardFonts.label(size: 12)
+                return cell
+            } else {
+                let typeStr = device.hasOutput && device.hasInput ? "Built-in" : "Built-in"
+                let cell = NSTextField(labelWithString: typeStr)
+                cell.font = SnowLeopardFonts.label(size: 12)
+                cell.textColor = .secondaryLabelColor
+                return cell
+            }
+
+        case 2:
+            // Input devices
+            let device = inputDevices[row]
+            if colID == "name" {
+                let cell = NSTextField(labelWithString: device.name)
+                cell.font = SnowLeopardFonts.label(size: 12)
+                return cell
+            } else {
+                let cell = NSTextField(labelWithString: "Built-in")
+                cell.font = SnowLeopardFonts.label(size: 12)
+                cell.textColor = .secondaryLabelColor
+                return cell
+            }
+
+        case 3:
+            // Alert sounds
+            let cell = NSTextField(labelWithString: alertSounds[row])
+            cell.font = SnowLeopardFonts.label(size: 12)
+            return cell
+
+        default:
+            return nil
+        }
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {
@@ -288,10 +475,19 @@ extension SoundPaneViewController: NSTableViewDataSource, NSTableViewDelegate {
         let row = table.selectedRow
         guard row >= 0 else { return }
 
-        if table.tag == 1 {
+        switch table.tag {
+        case 1:
             audio.setDefaultOutputDevice(outputDevices[row].id)
-        } else {
+        case 2:
             audio.setDefaultInputDevice(inputDevices[row].id)
+        case 3:
+            // Play alert sound preview
+            let soundName = alertSounds[row]
+            if let sound = NSSound(named: NSSound.Name(soundName)) {
+                sound.play()
+            }
+        default:
+            break
         }
     }
 }
