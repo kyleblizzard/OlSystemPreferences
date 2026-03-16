@@ -51,8 +51,12 @@ struct PreferenceItem {
         if let appIcon = appIcon {
             return appIcon
         }
-        return NSImage(systemSymbolName: sfSymbol, accessibilityDescription: title)
-            ?? NSImage(systemSymbolName: "questionmark.square", accessibilityDescription: title)!
+        // Use skeuomorphic icon if available
+        if let skeuIcon = SkeuomorphicIconFactory.presetIcon(for: id, size: AppConstants.iconSize) {
+            return skeuIcon
+        }
+        // Fallback: generate from SF Symbol + color
+        return SkeuomorphicIconFactory.icon(sfSymbol: sfSymbol, baseColor: iconColor, size: AppConstants.iconSize)
     }
 
     // MARK: - Open Action

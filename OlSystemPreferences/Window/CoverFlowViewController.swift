@@ -1,6 +1,7 @@
 import Cocoa
 import QuartzCore
 import Quartz
+import Photos
 
 protocol CoverFlowViewControllerDelegate: AnyObject {
     func coverFlowDidRequestOpen(_ controller: CoverFlowViewController, url: URL)
@@ -11,6 +12,15 @@ protocol CoverFlowViewControllerDelegate: AnyObject {
 class CoverFlowViewController: NSViewController {
 
     weak var delegate: CoverFlowViewControllerDelegate?
+
+    // MARK: - Source Mode
+
+    private enum SourceMode {
+        case filesystem
+        case photosLibrary
+    }
+
+    private var sourceMode: SourceMode = .filesystem
 
     // MARK: - Data
 
@@ -29,7 +39,16 @@ class CoverFlowViewController: NSViewController {
         let dateModified: Date?
         let kind: String
         var thumbnail: NSImage?
+        // Photos-specific
+        var photoAsset: PHAsset?
     }
+
+    // MARK: - Photos
+
+    private var photoAssets: PHFetchResult<PHAsset>?
+    private let imageManager = PHCachingImageManager()
+    private var photosAlbums: [PHAssetCollection] = []
+    private var currentAlbum: PHAssetCollection?  // nil = all photos
 
     // MARK: - Cover Flow Layer
 
@@ -53,6 +72,27 @@ class CoverFlowViewController: NSViewController {
 
     // Status bar
     private let statusLabel = NSTextField(labelWithString: "")
+
+    // Source picker (Filesystem / Photos Library)
+    private let sourcePicker: NSSegmentedControl = {
+        let seg = NSSegmentedControl(labels: ["Files", "Photos"], trackingMode: .selectOne, target: nil, action: nil)
+        seg.translatesAutoresizingMaskIntoConstraints = false
+        seg.selectedSegment = 0
+        seg.controlSize = .small
+        seg.segmentStyle = .roundRect
+        seg.font = NSFont(name: "Lucida Grande", size: 10)
+        return seg
+    }()
+
+    // Album picker (shown in Photos mode)
+    private let albumPicker: NSPopUpButton = {
+        let btn = NSPopUpButton(frame: .zero, pullsDown: false)
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.controlSize = .small
+        btn.font = NSFont(name: "Lucida Grande", size: 10)
+        btn.isHidden = true
+        return btn
+    }()
 
     // Scrub slider
     private let scrubSlider = NSSlider()
@@ -90,6 +130,16 @@ class CoverFlowViewController: NSViewController {
         pathLabel.isBezeled = false
         pathLabel.isEditable = false
         coverFlowArea.addSubview(pathLabel)
+
+        // Source picker
+        sourcePicker.target = self
+        sourcePicker.action = #selector(sourcePickerChanged(_:))
+        coverFlowArea.addSubview(sourcePicker)
+
+        // Album picker
+        albumPicker.target = self
+        albumPicker.action = #selector(albumPickerChanged(_:))
+        coverFlowArea.addSubview(albumPicker)
 
         // 3D container
         containerLayer = CATransformLayer()
@@ -191,6 +241,15 @@ class CoverFlowViewController: NSViewController {
             coverFlowArea.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             coverFlowHeightConstraint,
 
+            // Source picker (top-right of coverflow area)
+            sourcePicker.topAnchor.constraint(equalTo: coverFlowArea.topAnchor, constant: 5),
+            sourcePicker.trailingAnchor.constraint(equalTo: coverFlowArea.trailingAnchor, constant: -8),
+
+            // Album picker (top-right, left of source picker — Photos mode only)
+            albumPicker.centerYAnchor.constraint(equalTo: sourcePicker.centerYAnchor),
+            albumPicker.trailingAnchor.constraint(equalTo: sourcePicker.leadingAnchor, constant: -6),
+            albumPicker.widthAnchor.constraint(lessThanOrEqualToConstant: 200),
+
             // Path bar
             pathLabel.topAnchor.constraint(equalTo: coverFlowArea.topAnchor, constant: 6),
             pathLabel.centerXAnchor.constraint(equalTo: coverFlowArea.centerXAnchor),
@@ -277,7 +336,7 @@ class CoverFlowViewController: NSViewController {
             files.append(FileEntry(
                 url: fileURL, name: fileURL.lastPathComponent, icon: icon,
                 isDirectory: isDir, fileSize: fileSize, dateModified: dateMod,
-                kind: kind, thumbnail: thumbnail
+                kind: kind, thumbnail: thumbnail, photoAsset: nil
             ))
         }
 
@@ -299,6 +358,275 @@ class CoverFlowViewController: NSViewController {
         updateLayout(animated: false)
         syncTableSelection()
     }
+
+    // MARK: - Source Picker
+
+    @objc private func sourcePickerChanged(_ sender: NSSegmentedControl) {
+        SoundService.playClick()
+        if sender.selectedSegment == 0 {
+            sourceMode = .filesystem
+            albumPicker.isHidden = true
+            loadDirectory(currentDirectory)
+        } else {
+            sourceMode = .photosLibrary
+            albumPicker.isHidden = false
+            requestPhotosAccess()
+        }
+    }
+
+    @objc private func albumPickerChanged(_ sender: NSPopUpButton) {
+        let idx = sender.indexOfSelectedItem
+        if idx == 0 {
+            currentAlbum = nil
+        } else if idx - 1 < photosAlbums.count {
+            currentAlbum = photosAlbums[idx - 1]
+        }
+        loadPhotosFromCurrentAlbum()
+    }
+
+    // MARK: - Photos Library
+
+    private func requestPhotosAccess() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized, .limited:
+            loadPhotosLibrary()
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] newStatus in
+                DispatchQueue.main.async {
+                    if newStatus == .authorized || newStatus == .limited {
+                        self?.loadPhotosLibrary()
+                    } else {
+                        self?.showPhotosAccessDenied()
+                    }
+                }
+            }
+        default:
+            showPhotosAccessDenied()
+        }
+    }
+
+    private func showPhotosAccessDenied() {
+        files.removeAll()
+        cardLayers.forEach { $0.removeFromSuperlayer() }
+        cardLayers.removeAll()
+        fileTable.reloadData()
+        pathLabel.stringValue = "Photos access denied — grant access in System Settings > Privacy & Security > Photos"
+        statusLabel.stringValue = "No access"
+    }
+
+    private func loadPhotosLibrary() {
+        // Load albums for the picker
+        photosAlbums.removeAll()
+        albumPicker.removeAllItems()
+        albumPicker.addItem(withTitle: "All Photos")
+
+        let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
+        smartAlbums.enumerateObjects { [weak self] collection, _, _ in
+            // Only include albums that have photos
+            let count = PHAsset.fetchAssets(in: collection, options: nil).count
+            if count > 0 {
+                self?.photosAlbums.append(collection)
+                self?.albumPicker.addItem(withTitle: collection.localizedTitle ?? "Untitled")
+            }
+        }
+
+        let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        userAlbums.enumerateObjects { [weak self] collection, _, _ in
+            let count = PHAsset.fetchAssets(in: collection, options: nil).count
+            if count > 0 {
+                self?.photosAlbums.append(collection)
+                self?.albumPicker.addItem(withTitle: collection.localizedTitle ?? "Untitled")
+            }
+        }
+
+        // Select matching album or default to All Photos
+        if let current = currentAlbum, let idx = photosAlbums.firstIndex(of: current) {
+            albumPicker.selectItem(at: idx + 1)
+        } else {
+            albumPicker.selectItem(at: 0)
+            currentAlbum = nil
+        }
+
+        loadPhotosFromCurrentAlbum()
+    }
+
+    private func loadPhotosFromCurrentAlbum() {
+        files.removeAll()
+        cardLayers.forEach { $0.removeFromSuperlayer() }
+        cardLayers.removeAll()
+
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        // Limit to a reasonable number for performance
+        fetchOptions.fetchLimit = 500
+
+        let assets: PHFetchResult<PHAsset>
+        if let album = currentAlbum {
+            assets = PHAsset.fetchAssets(in: album, options: fetchOptions)
+            pathLabel.stringValue = "Photos — \(album.localizedTitle ?? "Album")"
+        } else {
+            assets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+            pathLabel.stringValue = "Photos — All Photos"
+        }
+        photoAssets = assets
+
+        // Create a placeholder image while thumbnails load
+        let placeholderImage: NSImage = {
+            let img = NSImage(size: NSSize(width: 256, height: 256))
+            img.lockFocus()
+            NSColor(white: 0.2, alpha: 1.0).setFill()
+            NSBezierPath(rect: NSRect(x: 0, y: 0, width: 256, height: 256)).fill()
+            // Draw camera icon
+            if let symbol = NSImage(systemSymbolName: "photo", accessibilityDescription: nil) {
+                let config = NSImage.SymbolConfiguration(pointSize: 80, weight: .ultraLight)
+                let configured = symbol.withSymbolConfiguration(config) ?? symbol
+                let tinted = configured.copy() as! NSImage
+                tinted.lockFocus()
+                NSColor(white: 0.4, alpha: 1.0).set()
+                NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
+                tinted.unlockFocus()
+                let s = tinted.size
+                tinted.draw(in: NSRect(x: (256 - s.width) / 2, y: (256 - s.height) / 2, width: s.width, height: s.height))
+            }
+            img.unlockFocus()
+            return img
+        }()
+
+        // Build entries with placeholders
+        assets.enumerateObjects { [weak self] asset, index, _ in
+            guard let self = self else { return }
+
+            let dateStr: String
+            if let date = asset.creationDate {
+                dateStr = CoverFlowViewController.photoDateFormatter.string(from: date)
+            } else {
+                dateStr = "Photo"
+            }
+
+            let name: String
+            // Try to get original filename
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let primary = resources.first {
+                name = primary.originalFilename
+            } else {
+                name = "\(dateStr).jpg"
+            }
+
+            let kind: String
+            switch asset.mediaType {
+            case .image:
+                if asset.mediaSubtypes.contains(.photoLive) {
+                    kind = "Live Photo"
+                } else if asset.mediaSubtypes.contains(.photoHDR) {
+                    kind = "HDR Photo"
+                } else {
+                    kind = "Photo"
+                }
+            case .video: kind = "Video"
+            default: kind = "Photo"
+            }
+
+            let entry = FileEntry(
+                url: URL(fileURLWithPath: "/Photos/\(name)"),  // placeholder URL
+                name: name,
+                icon: placeholderImage,
+                isDirectory: false,
+                fileSize: 0,
+                dateModified: asset.creationDate,
+                kind: "\(kind) — \(asset.pixelWidth)×\(asset.pixelHeight)",
+                thumbnail: placeholderImage,
+                photoAsset: asset
+            )
+            self.files.append(entry)
+        }
+
+        selectedIndex = 0
+
+        // Build card layers
+        for (i, file) in files.enumerated() {
+            let card = makeCardLayer(for: file, index: i)
+            cardLayers.append(card)
+            containerLayer.addSublayer(card)
+        }
+
+        scrubSlider.maxValue = max(Double(files.count - 1), 0)
+        scrubSlider.doubleValue = 0
+        scrubSlider.isEnabled = files.count > 1
+
+        fileTable.reloadData()
+        updateStatusBar()
+        updateLayout(animated: false)
+        syncTableSelection()
+
+        // Now load real thumbnails asynchronously
+        loadPhotoThumbnails()
+    }
+
+    private func loadPhotoThumbnails() {
+        guard let assets = photoAssets else { return }
+
+        let targetSize = CGSize(width: 512, height: 512)
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.isNetworkAccessAllowed = true
+        options.resizeMode = .fast
+
+        assets.enumerateObjects { [weak self] asset, index, _ in
+            guard let self = self else { return }
+
+            self.imageManager.requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: .aspectFill,
+                options: options
+            ) { image, info in
+                guard let image = image, index < self.files.count else { return }
+
+                let nsImage = image
+                nsImage.size = NSSize(width: 256, height: 256)
+
+                DispatchQueue.main.async {
+                    guard index < self.files.count else { return }
+                    self.files[index].thumbnail = nsImage
+                    self.files[index] = FileEntry(
+                        url: self.files[index].url,
+                        name: self.files[index].name,
+                        icon: nsImage,
+                        isDirectory: false,
+                        fileSize: self.files[index].fileSize,
+                        dateModified: self.files[index].dateModified,
+                        kind: self.files[index].kind,
+                        thumbnail: nsImage,
+                        photoAsset: self.files[index].photoAsset
+                    )
+
+                    // Update the card layer's content
+                    if index < self.cardLayers.count {
+                        let card = self.cardLayers[index]
+                        // Update the content sublayer (first sublayer is the content)
+                        if let contentLayer = card.sublayers?.first {
+                            contentLayer.contents = nsImage
+                        }
+                        // Update reflection content (last sublayer before gradient mask)
+                        if let sublayers = card.sublayers, sublayers.count >= 2 {
+                            let reflection = sublayers[sublayers.count - 1]
+                            if let reflContent = reflection.sublayers?.first {
+                                reflContent.contents = nsImage
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static let photoDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
 
     // MARK: - Thumbnail Generation
 
@@ -541,6 +869,13 @@ class CoverFlowViewController: NSViewController {
         guard selectedIndex >= 0 && selectedIndex < files.count else { return }
         let file = files[selectedIndex]
         SoundService.playClick()
+
+        if sourceMode == .photosLibrary, let asset = file.photoAsset {
+            // Export photo to temp and open in Preview
+            exportAndOpenPhoto(asset: asset, filename: file.name)
+            return
+        }
+
         if file.isDirectory {
             selectedIndex = 0
             loadDirectory(file.url)
@@ -549,7 +884,43 @@ class CoverFlowViewController: NSViewController {
         }
     }
 
+    private func exportAndOpenPhoto(asset: PHAsset, filename: String) {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
+
+        imageManager.requestImage(
+            for: asset,
+            targetSize: PHImageManagerMaximumSize,
+            contentMode: .default,
+            options: options
+        ) { image, info in
+            guard let nsImage = image else { return }
+            DispatchQueue.main.async {
+                let tempDir = FileManager.default.temporaryDirectory
+                let tempURL = tempDir.appendingPathComponent(filename)
+                if let tiff = nsImage.tiffRepresentation,
+                   let bitmap = NSBitmapImageRep(data: tiff),
+                   let jpeg = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.95]) {
+                    try? jpeg.write(to: tempURL)
+                    NSWorkspace.shared.open(tempURL)
+                }
+            }
+        }
+    }
+
     func navigateUp() {
+        if sourceMode == .photosLibrary {
+            // In Photos mode, navigate up goes to All Photos if in an album
+            if currentAlbum != nil {
+                SoundService.playNavigate()
+                currentAlbum = nil
+                albumPicker.selectItem(at: 0)
+                loadPhotosFromCurrentAlbum()
+            }
+            return
+        }
         let parent = currentDirectory.deletingLastPathComponent()
         guard parent != currentDirectory else { return }
         SoundService.playNavigate()
@@ -558,6 +929,7 @@ class CoverFlowViewController: NSViewController {
     }
 
     func navigateIntoSelected() {
+        if sourceMode == .photosLibrary { return }
         guard selectedIndex >= 0 && selectedIndex < files.count else { return }
         let file = files[selectedIndex]
         if file.isDirectory {
@@ -851,7 +1223,12 @@ extension CoverFlowViewController: NSTableViewDataSource, NSTableViewDelegate {
 
             let iconView = NSImageView()
             iconView.translatesAutoresizingMaskIntoConstraints = false
-            iconView.image = NSWorkspace.shared.icon(forFile: file.url.path)
+            if file.photoAsset != nil {
+                // Use the thumbnail for Photos entries
+                iconView.image = file.thumbnail ?? file.icon
+            } else {
+                iconView.image = NSWorkspace.shared.icon(forFile: file.url.path)
+            }
             iconView.imageScaling = .scaleProportionallyUpOrDown
             container.addSubview(iconView)
 

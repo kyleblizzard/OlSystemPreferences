@@ -22,6 +22,7 @@ targets:
           - "**/.DS_Store"
     dependencies:
       - framework: /System/Library/Frameworks/ScreenSaver.framework
+      - sdk: Photos.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.olsystempreferences.app

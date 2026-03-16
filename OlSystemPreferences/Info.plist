@@ -26,5 +26,7 @@
 	<string>AppIcon</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cover Flow needs access to your Photos library to browse and display your photos.</string>
 </dict>
 </plist>

@@ -17,6 +17,7 @@
 		2128974C126E0996F2912E7A /* ScreenSaver.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 474FEFACB65F060988AB2834 /* ScreenSaver.framework */; };
 		25AA6035DAB1F5F6E225105B /* AquaControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939684FD4DACC30D57755BAF /* AquaControls.swift */; };
 		2ACB6E3CDA77055E7A72F4DD /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = AE226221E63EC651ADA7341E /* AppIcon.icns */; };
+		2D1C402504DACDE963A48557 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8CA6B13EC9D40B74E14587D1 /* Photos.framework */; };
 		2FA55C0DA754BA92B805DE3A /* StickyNoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EDAF49E0F2B602439B78EF /* StickyNoteWidget.swift */; };
 		2FA5E5A702E7CDBD17FB7ED4 /* SnowLeopardNavControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B5373CCB8768F111AFE817 /* SnowLeopardNavControl.swift */; };
 		3277ADA6DBA4E5CBA122582F /* BatteryPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8109E48B9BBCB5B9452724FE /* BatteryPaneViewController.swift */; };
@@ -47,6 +48,7 @@
 		97373F5430B65117E5EC8110 /* SearchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F448379ED241714790908B8B /* SearchManager.swift */; };
 		9D23F26955D4BC4E4ADA8D7E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93979910CD2F872CEC6D4A29 /* Assets.xcassets */; };
 		9F0E4BFE73051FD85DB4312A /* WiFiPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF9CABF339A45FA6DEA56A1 /* WiFiPaneViewController.swift */; };
+		9F4E6C95B44B936DCF8C26E7 /* SkeuomorphicIconFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9094C31A15A24A1D5F8900DD /* SkeuomorphicIconFactory.swift */; };
 		A249BB88BAFC939A6476A5EE /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57D53021C7DF43D5C682808 /* MainWindowController.swift */; };
 		A8DCFC98A4972ECC7E227D43 /* NSWindow+Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D83F632A87F125D9E891677 /* NSWindow+Animation.swift */; };
 		AB31D0F752B1C8617A2F129B /* DockPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 746B91C7AABFD74210900995 /* DockPreviewView.swift */; };
@@ -117,6 +119,8 @@
 		8109E48B9BBCB5B9452724FE /* BatteryPaneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryPaneViewController.swift; sourceTree = "<group>"; };
 		810DE26B840EB7C567952C9F /* DefaultsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultsService.swift; sourceTree = "<group>"; };
 		8223C2A4FA204E7B12993651 /* PaneRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneRegistry.swift; sourceTree = "<group>"; };
+		8CA6B13EC9D40B74E14587D1 /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
+		9094C31A15A24A1D5F8900DD /* SkeuomorphicIconFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeuomorphicIconFactory.swift; sourceTree = "<group>"; };
 		919235BC2B74926773F679B0 /* UnitConverterWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitConverterWidget.swift; sourceTree = "<group>"; };
 		926537F0C34FAF97DA99D916 /* NetworkPaneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkPaneViewController.swift; sourceTree = "<group>"; };
 		939684FD4DACC30D57755BAF /* AquaControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AquaControls.swift; sourceTree = "<group>"; };
@@ -154,6 +158,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2128974C126E0996F2912E7A /* ScreenSaver.framework in Frameworks */,
+				2D1C402504DACDE963A48557 /* Photos.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,6 +347,7 @@
 		93EF3395873DE627BFBE6BFB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8CA6B13EC9D40B74E14587D1 /* Photos.framework */,
 				474FEFACB65F060988AB2834 /* ScreenSaver.framework */,
 			);
 			name = Frameworks;
@@ -494,6 +500,7 @@
 			children = (
 				DC273C0DE821132769BA3A0E /* Constants.swift */,
 				9D83F632A87F125D9E891677 /* NSWindow+Animation.swift */,
+				9094C31A15A24A1D5F8900DD /* SkeuomorphicIconFactory.swift */,
 				A38D2B07E33FDC52BA84107D /* SnowLeopardPaneHelper.swift */,
 			);
 			path = Utilities;
@@ -637,6 +644,7 @@
 				C9A7A94338BD86314B556A25 /* RedirectPaneViewController.swift in Sources */,
 				97373F5430B65117E5EC8110 /* SearchManager.swift in Sources */,
 				DD8173483532FA0A23C332C1 /* SharingPaneViewController.swift in Sources */,
+				9F4E6C95B44B936DCF8C26E7 /* SkeuomorphicIconFactory.swift in Sources */,
 				2FA5E5A702E7CDBD17FB7ED4 /* SnowLeopardNavControl.swift in Sources */,
 				704F6DB689CA1A621B35EFF6 /* SnowLeopardPaneHelper.swift in Sources */,
 				6C20124DF385EDE1BF619EA8 /* SoftwareUpdatePaneViewController.swift in Sources */,

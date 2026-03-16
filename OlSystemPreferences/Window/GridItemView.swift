@@ -8,16 +8,6 @@ class GridItemView: NSCollectionViewItem {
         let iv = NSImageView()
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.imageScaling = .scaleProportionallyUpOrDown
-        iv.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .regular)
-            .applying(.preferringMulticolor())
-        // Subtle drop shadow for depth (Snow Leopard icon style)
-        iv.shadow = {
-            let s = NSShadow()
-            s.shadowOffset = NSSize(width: 0, height: -1)
-            s.shadowBlurRadius = 1.5
-            s.shadowColor = NSColor(white: 0.0, alpha: 0.30)
-            return s
-        }()
         return iv
     }()
 
@@ -110,16 +100,9 @@ class GridItemView: NSCollectionViewItem {
     func configure(title: String, icon: NSImage, tintColor: NSColor?) {
         titleLabel.stringValue = title
         iconImageView.image = icon
-        if let tintColor = tintColor {
-            // Prefer multicolor rendering for richer icons; fall back to palette with tint
-            iconImageView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: AppConstants.iconSize, weight: .regular)
-                .applying(.preferringMulticolor())
-            iconImageView.contentTintColor = tintColor
-        } else {
-            // For app icons: no tint, no symbol config
-            iconImageView.symbolConfiguration = nil
-            iconImageView.contentTintColor = nil
-        }
+        // Icons are pre-rendered by SkeuomorphicIconFactory or are app icons — no tint needed
+        iconImageView.symbolConfiguration = nil
+        iconImageView.contentTintColor = nil
     }
 }
 
