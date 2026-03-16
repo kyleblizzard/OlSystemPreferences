@@ -35,7 +35,6 @@ class DockPaneViewController: NSViewController, PaneProtocol {
     private let animateCheck = AquaCheckbox(title: "Animate opening applications")
     private let autohideCheck = AquaCheckbox(title: "Automatically hide and show the Dock")
     private let indicatorsCheck = AquaCheckbox(title: "Show indicators for open applications")
-    private let showRecentsCheck = AquaCheckbox(title: "Show recent applications in Dock")
 
     // Keep a reference to the scroll view wrapping the outer stack
     private var scrollView: NSScrollView!
@@ -187,7 +186,7 @@ class DockPaneViewController: NSViewController, PaneProtocol {
         optStack.spacing = 6
         optStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
 
-        let allChecks: [AquaCheckbox] = [minimizeToAppCheck, animateCheck, autohideCheck, indicatorsCheck, showRecentsCheck]
+        let allChecks: [AquaCheckbox] = [minimizeToAppCheck, animateCheck, autohideCheck, indicatorsCheck]
         for check in allChecks {
             check.target = self
             check.action = #selector(checkboxChanged(_:))
@@ -249,7 +248,6 @@ class DockPaneViewController: NSViewController, PaneProtocol {
         animateCheck.isChecked = dock.launchAnimation
         autohideCheck.isChecked = dock.autohide
         indicatorsCheck.isChecked = dock.showProcessIndicators
-        showRecentsCheck.isChecked = dock.showRecents
 
         // Sync preview
         dockPreview.dockSize = CGFloat(dock.tileSize)
@@ -303,7 +301,6 @@ class DockPaneViewController: NSViewController, PaneProtocol {
         case indicatorsCheck:
             dock.showProcessIndicators = on
             dockPreview.showIndicators = on
-        case showRecentsCheck: dock.showRecents = on
         default: break
         }
     }

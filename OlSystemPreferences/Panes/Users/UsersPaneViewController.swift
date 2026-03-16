@@ -4,8 +4,8 @@ class UsersPaneViewController: NSViewController, PaneProtocol {
 
     // MARK: - PaneProtocol
 
-    var paneIdentifier: String { "users" }
-    var paneTitle: String { "Users & Groups" }
+    var paneIdentifier: String { "accounts" }
+    var paneTitle: String { "Accounts" }
     var paneIcon: NSImage {
         NSImage(systemSymbolName: "person.2.fill", accessibilityDescription: "Users & Groups") ?? NSImage()
     }

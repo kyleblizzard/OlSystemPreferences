@@ -1,12 +1,9 @@
 import Cocoa
 
-/// What's currently shown in the window / as an overlay.
+/// What's currently shown in the window.
 enum NavEntry: Equatable {
     case grid
     case pane(String)
-    case launchpad
-    case dashboard
-    case coverFlow
 }
 
 class MainWindowController: NSWindowController, NSToolbarDelegate {
@@ -17,24 +14,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
     private lazy var dashboardController = DashboardWindowController()
     private lazy var coverFlowVC = CoverFlowViewController()
 
-    // Mode bar in content area
-    private let modeBar = ModeBarBackgroundView()
-    private let modeSegment: NSSegmentedControl = {
-        let seg = NSSegmentedControl()
-        seg.segmentCount = 4
-        seg.trackingMode = .selectOne
-        seg.segmentStyle = .texturedRounded
-        let titles = ["Preferences", "Launchpad", "Dashboard", "Cover Flow"]
-        for (i, t) in titles.enumerated() {
-            seg.setLabel(t, forSegment: i)
-            seg.setWidth(0, forSegment: i)
-        }
-        seg.selectedSegment = 0
-        seg.controlSize = .regular
-        seg.font = NSFont(name: "Lucida Grande", size: 11)
-        seg.translatesAutoresizingMaskIntoConstraints = false
-        return seg
-    }()
     private let contentContainer = NSView()
 
     // Unified navigation history across all modes
@@ -42,11 +21,11 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
     private var navForwardStack: [NavEntry] = []
     private var currentEntry: NavEntry = .grid
     private var currentPaneVC: NSViewController?
-    private var isNavigating = false
 
     // Toolbar
     private let toolbarIdentifier = NSToolbar.Identifier("MainToolbar")
     private let navItemID = NSToolbarItem.Identifier("nav")
+    private let showAllItemID = NSToolbarItem.Identifier("showAll")
     private let searchItemID = NSToolbarItem.Identifier("search")
 
     convenience init() {
@@ -75,7 +54,7 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         dashboardController.onDismiss = { [weak self] in self?.overlayDidDismiss() }
 
         setupToolbar()
-        setupModeBar()
+        setupContentContainer()
         setupContent()
         updateNavButtons()
     }
@@ -88,31 +67,14 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         window?.toolbar = toolbar
     }
 
-    private func setupModeBar() {
+    private func setupContentContainer() {
         guard let windowContentView = window?.contentView else { return }
 
-        modeBar.translatesAutoresizingMaskIntoConstraints = false
-        windowContentView.addSubview(modeBar)
-
-        // Segmented control centered in the mode bar
-        modeSegment.target = self
-        modeSegment.action = #selector(modeSegmentChanged(_:))
-        modeBar.addSubview(modeSegment)
-
-        // Content container sits below mode bar
         contentContainer.translatesAutoresizingMaskIntoConstraints = false
         windowContentView.addSubview(contentContainer)
 
         NSLayoutConstraint.activate([
-            modeBar.topAnchor.constraint(equalTo: windowContentView.topAnchor),
-            modeBar.leadingAnchor.constraint(equalTo: windowContentView.leadingAnchor),
-            modeBar.trailingAnchor.constraint(equalTo: windowContentView.trailingAnchor),
-            modeBar.heightAnchor.constraint(equalToConstant: 32),
-
-            modeSegment.centerXAnchor.constraint(equalTo: modeBar.centerXAnchor),
-            modeSegment.centerYAnchor.constraint(equalTo: modeBar.centerYAnchor),
-
-            contentContainer.topAnchor.constraint(equalTo: modeBar.bottomAnchor),
+            contentContainer.topAnchor.constraint(equalTo: windowContentView.topAnchor),
             contentContainer.leadingAnchor.constraint(equalTo: windowContentView.leadingAnchor),
             contentContainer.trailingAnchor.constraint(equalTo: windowContentView.trailingAnchor),
             contentContainer.bottomAnchor.constraint(equalTo: windowContentView.bottomAnchor),
@@ -162,37 +124,17 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
 
     /// Called when Launchpad/Dashboard dismiss themselves (ESC, background click, etc.)
     private func overlayDidDismiss() {
-        guard !isNavigating else { return }
-        guard currentEntry == .launchpad || currentEntry == .dashboard else { return }
-        navBackStack.append(currentEntry)
-        navForwardStack.removeAll()
-        currentEntry = .grid
-        updateNavButtons()
+        // No-op — overlays are independent now
     }
 
     private func updateNavButtons() {
         navControl.backEnabled = !navBackStack.isEmpty
         navControl.forwardEnabled = !navForwardStack.isEmpty
-
-        // Highlight the correct mode segment
-        let selectedIndex: Int
-        switch currentEntry {
-        case .grid, .pane: selectedIndex = 0
-        case .launchpad:   selectedIndex = 1
-        case .dashboard:   selectedIndex = 2
-        case .coverFlow:   selectedIndex = 3
-        }
-        modeSegment.selectedSegment = selectedIndex
     }
 
     /// Tear down whatever is currently showing, then show the new entry.
     private func applyEntry(_ entry: NavEntry) {
-        // Tear down current (suppress onDismiss callbacks during navigation)
-        isNavigating = true
         tearDownCurrentView()
-        isNavigating = false
-
-        // Apply new
         currentEntry = entry
 
         switch entry {
@@ -200,30 +142,16 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
             showGrid()
         case .pane(let id):
             showPane(id)
-        case .launchpad:
-            showGrid() // grid behind the overlay
-            launchpadController.show()
-        case .dashboard:
-            showGrid()
-            dashboardController.show()
-        case .coverFlow:
-            showCoverFlowView()
         }
     }
 
     private func tearDownCurrentView() {
-        // Dismiss overlays
-        launchpadController.dismissIfShowing()
-        dashboardController.dismissIfShowing()
-
-        // Remove in-window views
         if let paneVC = currentPaneVC {
             (paneVC as? PaneProtocol)?.paneWillDisappear()
             paneVC.view.removeFromSuperview()
             currentPaneVC = nil
         }
         gridViewController.view.removeFromSuperview()
-        coverFlowVC.view.removeFromSuperview()
     }
 
     private func showGrid() {
@@ -256,63 +184,42 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
             paneView.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
         ])
 
-        let paneSize = NSSize(width: pane.preferredPaneSize.width, height: pane.preferredPaneSize.height + 64)
+        let paneSize = NSSize(width: pane.preferredPaneSize.width, height: pane.preferredPaneSize.height + 32)
         window?.animateResize(to: paneSize)
         window?.title = pane.paneTitle
         currentPaneVC = pane.viewController
     }
 
-    private func showCoverFlowView() {
-        coverFlowVC.view.translatesAutoresizingMaskIntoConstraints = false
-        contentContainer.addSubview(coverFlowVC.view)
-        NSLayoutConstraint.activate([
-            coverFlowVC.view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
-            coverFlowVC.view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
-            coverFlowVC.view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            coverFlowVC.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
-        ])
-        window?.animateResize(to: NSSize(width: 768, height: 680))
-        window?.title = "Cover Flow"
-        window?.makeFirstResponder(coverFlowVC)
-    }
-
-    // MARK: - Mode button handler
-
-    @objc private func modeSegmentChanged(_ sender: NSSegmentedControl) {
-        SoundService.playClick()
-        switch sender.selectedSegment {
-        case 0: navigateTo(.grid)
-        case 1: navigateTo(.launchpad)
-        case 2: navigateTo(.dashboard)
-        case 3: navigateTo(.coverFlow)
-        default: break
-        }
-    }
-
     // MARK: - Public for AppDelegate menus
 
-    func switchToGrid() {
+    @objc func switchToGrid() {
         navigateTo(.grid)
     }
 
     func switchToCoverFlow() {
-        navigateTo(.coverFlow)
+        guard let window = window else { return }
+        coverFlowVC.view.translatesAutoresizingMaskIntoConstraints = false
+        // Show cover flow as overlay in a sheet or separate window
+        let coverFlowWindow = NSWindow(
+            contentRect: NSRect(origin: .zero, size: NSSize(width: 768, height: 680)),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        coverFlowWindow.title = "Cover Flow"
+        coverFlowWindow.contentView = coverFlowVC.view
+        coverFlowWindow.appearance = NSAppearance(named: .aqua)
+        coverFlowWindow.center()
+        window.addChildWindow(coverFlowWindow, ordered: .above)
+        coverFlowWindow.makeKeyAndOrderFront(nil)
     }
 
     @objc func toggleDashboard(_ sender: Any?) {
-        if currentEntry == .dashboard {
-            navigateTo(.grid)
-        } else {
-            navigateTo(.dashboard)
-        }
+        dashboardController.show()
     }
 
     @objc func toggleLaunchpad(_ sender: Any?) {
-        if currentEntry == .launchpad {
-            navigateTo(.grid)
-        } else {
-            navigateTo(.launchpad)
-        }
+        launchpadController.show()
     }
 
     // MARK: - NSToolbarDelegate
@@ -334,6 +241,20 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
             item.view = navControl
             return item
 
+        case showAllItemID:
+            let item = NSToolbarItem(itemIdentifier: showAllItemID)
+            item.label = "Show All"
+            item.toolTip = "Show All Preferences"
+            let button = NSButton(frame: NSRect(x: 0, y: 0, width: 56, height: 24))
+            button.bezelStyle = .texturedRounded
+            button.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Show All")
+            button.imagePosition = .imageOnly
+            button.target = self
+            button.action = #selector(switchToGrid)
+            button.font = SnowLeopardFonts.label(size: 11)
+            item.view = button
+            return item
+
         case searchItemID:
             let item = NSSearchToolbarItem(itemIdentifier: searchItemID)
             item.searchField.delegate = self
@@ -347,7 +268,7 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [navItemID, .flexibleSpace, searchItemID]
+        [navItemID, showAllItemID, .flexibleSpace, searchItemID]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -384,29 +305,3 @@ extension MainWindowController: NSSearchFieldDelegate {
     }
 }
 
-// MARK: - Mode Bar Background View
-
-/// Custom-drawn mode bar with subtle gradient and bottom border line (Snow Leopard style).
-private class ModeBarBackgroundView: NSView {
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = false
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        wantsLayer = false
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        // Subtle gradient: slightly lighter at top, modeBarBackground at bottom
-        let topColor = SnowLeopardColors.modeBarBackground.blended(withFraction: 0.15, of: .white)
-            ?? SnowLeopardColors.modeBarBackground
-        let gradient = NSGradient(starting: topColor, ending: SnowLeopardColors.modeBarBackground)
-        gradient?.draw(in: bounds, angle: 270)
-
-        // 1px bottom border line
-        SnowLeopardColors.modeBarBorder.setFill()
-        NSRect(x: 0, y: 0, width: bounds.width, height: 1).fill()
-    }
-}

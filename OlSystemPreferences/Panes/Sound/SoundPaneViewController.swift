@@ -197,6 +197,31 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
         return container
     }
 
+    /// Builds the output volume + mute row used on all three tabs (Snow Leopard style)
+    private func buildOutputVolumeRow() -> NSView {
+        let volSlider = AquaSlider(minValue: 0, maxValue: 1, value: 0.5)
+        volSlider.target = self
+        volSlider.action = #selector(outputVolumeChanged(_:))
+        volSlider.isContinuous = true
+        volSlider.showsFillColor = true
+        volSlider.widthAnchor.constraint(equalToConstant: 260).isActive = true
+
+        let muteCheck = AquaCheckbox(title: "Mute", isChecked: false)
+        muteCheck.target = self
+        muteCheck.action = #selector(muteToggled(_:))
+
+        // Read current values
+        if let vol = audio.getOutputVolume() {
+            volSlider.doubleValue = Double(vol)
+        }
+        muteCheck.isChecked = audio.isMuted() ?? false
+
+        return SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Output volume:"),
+            controls: [volSlider, muteCheck]
+        )
+    }
+
     // MARK: - Output Tab
 
     private func buildOutputTab() -> NSView {
@@ -235,8 +260,12 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
 
         scrollView.documentView = outputDeviceTable
         scrollView.widthAnchor.constraint(equalToConstant: 560).isActive = true
-        scrollView.heightAnchor.constraint(equalToConstant: 280).isActive = true
+        scrollView.heightAnchor.constraint(equalToConstant: 240).isActive = true
         stack.addArrangedSubview(scrollView)
+
+        // Output volume + mute (Snow Leopard showed this on all tabs)
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+        stack.addArrangedSubview(buildOutputVolumeRow())
 
         container.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -303,6 +332,10 @@ class SoundPaneViewController: NSViewController, PaneProtocol {
             controls: [inputLevelIndicator]
         )
         stack.addArrangedSubview(levelRow)
+
+        // Output volume + mute (Snow Leopard showed this on all tabs)
+        stack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 540))
+        stack.addArrangedSubview(buildOutputVolumeRow())
 
         container.addSubview(stack)
         NSLayoutConstraint.activate([

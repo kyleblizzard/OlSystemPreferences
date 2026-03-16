@@ -70,323 +70,251 @@ struct PreferenceItem {
     }
 }
 
-// MARK: - Full Preference Item Registry
+// MARK: - Snow Leopard 10.6 Preference Item Registry (28 panes)
 
 extension PreferenceItem {
 
     static let allItems: [PreferenceItem] = personalItems + hardwareItems + internetItems + systemItems
 
-    // MARK: Personal
+    // MARK: Personal (7)
 
     static let personalItems: [PreferenceItem] = [
         PreferenceItem(
             id: "appearance",
             title: "Appearance",
             sfSymbol: "paintbrush.fill",
-            iconColor: .systemPurple,
+            iconColor: NSColor(calibratedRed: 0.55, green: 0.35, blue: 0.75, alpha: 1.0),
             category: .personal,
             settingsURL: "com.apple.Appearance-Settings.extension",
-            keywords: ["dark mode", "light mode", "accent color", "highlight", "theme"]
+            keywords: ["appearance", "blue", "graphite", "accent color", "highlight", "font smoothing"]
         ),
         PreferenceItem(
-            id: "wallpaper",
-            title: "Wallpaper",
+            id: "desktopscreensaver",
+            title: "Desktop & Screen Saver",
             sfSymbol: "photo.fill",
-            iconColor: .systemCyan,
+            iconColor: NSColor(calibratedRed: 0.20, green: 0.55, blue: 0.80, alpha: 1.0),
             category: .personal,
             settingsURL: "com.apple.Wallpaper-Settings.extension",
-            keywords: ["desktop", "background", "picture", "wallpaper"]
-        ),
-        PreferenceItem(
-            id: "screensaver",
-            title: "Screen Saver",
-            sfSymbol: "sparkles.tv.fill",
-            iconColor: .systemIndigo,
-            category: .personal,
-            settingsURL: "com.apple.ScreenSaver-Settings.extension",
-            keywords: ["screen saver", "screensaver", "hot corners", "idle"]
+            keywords: ["desktop", "background", "picture", "screen saver", "screensaver"]
         ),
         PreferenceItem(
             id: "dock",
-            title: "Desktop & Dock",
+            title: "Dock",
             sfSymbol: "dock.rectangle",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
             category: .personal,
             settingsURL: "com.apple.Desktop-Settings.extension",
-            keywords: ["dock", "size", "magnification", "autohide", "minimize", "mission control", "stage manager"]
-        ),
-        PreferenceItem(
-            id: "notifications",
-            title: "Notifications",
-            sfSymbol: "bell.badge.fill",
-            iconColor: .systemRed,
-            category: .personal,
-            settingsURL: "com.apple.Notifications-Settings.extension",
-            keywords: ["alerts", "banners", "badges", "notification center"]
-        ),
-        PreferenceItem(
-            id: "focus",
-            title: "Focus",
-            sfSymbol: "moon.fill",
-            iconColor: .systemIndigo,
-            category: .personal,
-            settingsURL: "com.apple.Focus-Settings.extension",
-            keywords: ["do not disturb", "focus mode", "sleep", "driving"]
-        ),
-        PreferenceItem(
-            id: "controlcenter",
-            title: "Control Center",
-            sfSymbol: "switch.2",
-            iconColor: NSColor(calibratedRed: 0.45, green: 0.45, blue: 0.50, alpha: 1.0),
-            category: .personal,
-            settingsURL: "com.apple.ControlCenter-Settings.extension",
-            keywords: ["menu bar", "control center", "widgets", "clock", "bluetooth", "wifi"]
-        ),
-        PreferenceItem(
-            id: "spotlight",
-            title: "Siri & Spotlight",
-            sfSymbol: "magnifyingglass",
-            iconColor: .systemPink,
-            category: .personal,
-            settingsURL: "com.apple.Siri-Settings.extension",
-            keywords: ["siri", "spotlight", "search", "apple intelligence"]
+            keywords: ["dock", "size", "magnification", "autohide", "minimize"]
         ),
         PreferenceItem(
             id: "exposespaces",
             title: "Exposé & Spaces",
             sfSymbol: "rectangle.3.group",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.45, blue: 0.80, alpha: 1.0),
             category: .personal,
             settingsURL: "com.apple.Desktop-Settings.extension",
             keywords: ["expose", "spaces", "hot corner", "mission control", "desktop"]
         ),
+        PreferenceItem(
+            id: "languagetext",
+            title: "Language & Text",
+            sfSymbol: "character.book.closed.fill",
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
+            category: .personal,
+            settingsURL: "com.apple.Keyboard-Settings.extension",
+            keywords: ["language", "region", "text", "input source", "format", "international"]
+        ),
+        PreferenceItem(
+            id: "security",
+            title: "Security",
+            sfSymbol: "lock.fill",
+            iconColor: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0),
+            category: .personal,
+            settingsURL: "com.apple.settings.PrivacySecurity.extension",
+            keywords: ["security", "password", "filevault", "firewall", "require password"]
+        ),
+        PreferenceItem(
+            id: "spotlight",
+            title: "Spotlight",
+            sfSymbol: "magnifyingglass",
+            iconColor: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0),
+            category: .personal,
+            settingsURL: "com.apple.Siri-Settings.extension",
+            keywords: ["spotlight", "search", "index", "privacy"]
+        ),
     ]
 
-    // MARK: Hardware
+    // MARK: Hardware (8)
 
     static let hardwareItems: [PreferenceItem] = [
+        PreferenceItem(
+            id: "cdsdvds",
+            title: "CDs & DVDs",
+            sfSymbol: "opticaldisc.fill",
+            iconColor: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0),
+            category: .hardware,
+            settingsURL: "com.apple.systempreferences.GeneralSettings",
+            keywords: ["cd", "dvd", "disc", "blank", "insert"]
+        ),
         PreferenceItem(
             id: "displays",
             title: "Displays",
             sfSymbol: "display",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.78, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Displays-Settings.extension",
-            keywords: ["resolution", "brightness", "refresh rate", "night shift", "true tone", "monitor"]
+            keywords: ["resolution", "brightness", "color", "display", "monitor", "arrangement"]
         ),
         PreferenceItem(
-            id: "sound",
-            title: "Sound",
-            sfSymbol: "speaker.wave.3.fill",
-            iconColor: .systemPink,
+            id: "energysaver",
+            title: "Energy Saver",
+            sfSymbol: "battery.100.bolt",
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0),
             category: .hardware,
-            settingsURL: "com.apple.Sound-Settings.extension",
-            keywords: ["volume", "output", "input", "microphone", "speaker", "alert"]
+            settingsURL: "com.apple.Battery-Settings.extension",
+            keywords: ["energy saver", "sleep", "power", "battery", "schedule", "ups"]
         ),
         PreferenceItem(
             id: "keyboard",
             title: "Keyboard",
             sfSymbol: "keyboard",
-            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
+            iconColor: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Keyboard-Settings.extension",
-            keywords: ["key repeat", "shortcuts", "input sources", "dictation", "text replacement"]
+            keywords: ["key repeat", "shortcuts", "input sources", "modifier keys"]
         ),
         PreferenceItem(
             id: "mouse",
             title: "Mouse",
             sfSymbol: "computermouse.fill",
-            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
+            iconColor: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Mouse-Settings.extension",
             keywords: ["tracking", "scrolling", "clicking", "mouse"]
         ),
         PreferenceItem(
-            id: "trackpad",
-            title: "Trackpad",
-            sfSymbol: "rectangle.and.hand.point.up.left.fill",
-            iconColor: NSColor(calibratedRed: 0.40, green: 0.42, blue: 0.48, alpha: 1.0),
-            category: .hardware,
-            settingsURL: "com.apple.Trackpad-Settings.extension",
-            keywords: ["trackpad", "gestures", "tap", "click", "scroll", "force click"]
-        ),
-        PreferenceItem(
-            id: "printers",
-            title: "Printers & Scanners",
+            id: "printfax",
+            title: "Print & Fax",
             sfSymbol: "printer.fill",
             iconColor: NSColor(calibratedRed: 0.35, green: 0.55, blue: 0.75, alpha: 1.0),
             category: .hardware,
             settingsURL: "com.apple.Print-Scan-Settings.extension",
-            keywords: ["printer", "scanner", "print", "fax"]
+            keywords: ["printer", "fax", "print", "scanner"]
         ),
         PreferenceItem(
-            id: "battery",
-            title: "Battery",
-            sfSymbol: "battery.100.bolt",
-            iconColor: .systemGreen,
+            id: "sound",
+            title: "Sound",
+            sfSymbol: "speaker.wave.3.fill",
+            iconColor: NSColor(calibratedRed: 0.80, green: 0.35, blue: 0.50, alpha: 1.0),
             category: .hardware,
-            settingsURL: "com.apple.Battery-Settings.extension",
-            keywords: ["battery", "energy saver", "power", "charging", "low power mode"]
+            settingsURL: "com.apple.Sound-Settings.extension",
+            keywords: ["volume", "output", "input", "microphone", "speaker", "alert"]
+        ),
+        PreferenceItem(
+            id: "trackpad",
+            title: "Trackpad",
+            sfSymbol: "rectangle.and.hand.point.up.left.fill",
+            iconColor: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0),
+            category: .hardware,
+            settingsURL: "com.apple.Trackpad-Settings.extension",
+            keywords: ["trackpad", "gestures", "tap", "click", "scroll"]
         ),
     ]
 
-    // MARK: Internet & Wireless
+    // MARK: Internet & Wireless (4)
 
     static let internetItems: [PreferenceItem] = [
-        PreferenceItem(
-            id: "appleid",
-            title: "Apple ID",
-            sfSymbol: "person.crop.circle.fill",
-            iconColor: .systemBlue,
-            category: .internetWireless,
-            settingsURL: "com.apple.systempreferences.AppleIDSettings",
-            keywords: ["apple id", "icloud", "account", "sign in", "apple account"]
-        ),
-        PreferenceItem(
-            id: "wifi",
-            title: "Wi-Fi",
-            sfSymbol: "wifi",
-            iconColor: .systemBlue,
-            category: .internetWireless,
-            settingsURL: "com.apple.wifi-settings-extension",
-            keywords: ["wifi", "wireless", "network", "airport", "connect"]
-        ),
         PreferenceItem(
             id: "bluetooth",
             title: "Bluetooth",
             sfSymbol: "wave.3.right",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.85, alpha: 1.0),
             category: .internetWireless,
             settingsURL: "com.apple.BluetoothSettings",
             keywords: ["bluetooth", "wireless", "pair", "connect", "devices"]
         ),
         PreferenceItem(
+            id: "mobileme",
+            title: "MobileMe",
+            sfSymbol: "cloud.fill",
+            iconColor: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0),
+            category: .internetWireless,
+            settingsURL: "com.apple.Internet-Accounts-Settings.extension",
+            keywords: ["mobileme", "icloud", "sync", "idisk", "mail", "account"]
+        ),
+        PreferenceItem(
             id: "network",
             title: "Network",
             sfSymbol: "network",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
             category: .internetWireless,
             settingsURL: "com.apple.Network-Settings.extension",
-            keywords: ["ethernet", "vpn", "dns", "proxy", "firewall", "ip"]
-        ),
-        PreferenceItem(
-            id: "internetaccounts",
-            title: "Internet Accounts",
-            sfSymbol: "at",
-            iconColor: .systemBlue,
-            category: .internetWireless,
-            settingsURL: "com.apple.Internet-Accounts-Settings.extension",
-            keywords: ["email", "contacts", "calendar", "google", "exchange", "account"]
+            keywords: ["ethernet", "wifi", "airport", "vpn", "dns", "proxy", "firewall", "ip"]
         ),
         PreferenceItem(
             id: "sharing",
             title: "Sharing",
             sfSymbol: "person.2.fill",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
             category: .internetWireless,
             settingsURL: "com.apple.Sharing-Settings.extension",
-            keywords: ["sharing", "file sharing", "screen sharing", "remote login", "airdrop", "hostname"]
+            keywords: ["sharing", "file sharing", "screen sharing", "remote login", "computer name"]
         ),
     ]
 
-    // MARK: System
+    // MARK: System (8)
 
     static let systemItems: [PreferenceItem] = [
         PreferenceItem(
-            id: "general",
-            title: "General",
-            sfSymbol: "gearshape",
-            iconColor: NSColor(calibratedRed: 0.50, green: 0.50, blue: 0.55, alpha: 1.0),
-            category: .system,
-            settingsURL: "com.apple.systempreferences.GeneralSettings",
-            keywords: ["about", "software update", "storage", "airdrop", "login items", "language"]
-        ),
-        PreferenceItem(
-            id: "users",
-            title: "Users & Groups",
+            id: "accounts",
+            title: "Accounts",
             sfSymbol: "person.2.fill",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Users-Groups-Settings.extension",
             keywords: ["users", "accounts", "login", "password", "admin", "guest"]
         ),
         PreferenceItem(
-            id: "passwords",
-            title: "Passwords",
-            sfSymbol: "key.fill",
-            iconColor: .systemYellow,
-            category: .system,
-            settingsURL: "com.apple.Passwords-Settings.extension",
-            keywords: ["passwords", "keychain", "passkey", "autofill"]
-        ),
-        PreferenceItem(
-            id: "touchid",
-            title: "Touch ID & Password",
-            sfSymbol: "touchid",
-            iconColor: .systemRed,
-            category: .system,
-            settingsURL: "com.apple.Touch-ID-Settings.extension",
-            keywords: ["touch id", "fingerprint", "password", "login", "biometric"]
-        ),
-        PreferenceItem(
-            id: "privacy",
-            title: "Privacy & Security",
-            sfSymbol: "hand.raised.fill",
-            iconColor: .systemBlue,
-            category: .system,
-            settingsURL: "com.apple.settings.PrivacySecurity.extension",
-            keywords: ["privacy", "security", "location", "camera", "microphone", "filevault", "firewall"]
-        ),
-        PreferenceItem(
             id: "datetime",
             title: "Date & Time",
             sfSymbol: "clock.fill",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.48, blue: 0.80, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Date-Time-Settings.extension",
             keywords: ["date", "time", "timezone", "clock", "ntp"]
         ),
         PreferenceItem(
+            id: "parentalcontrols",
+            title: "Parental Controls",
+            sfSymbol: "person.2.badge.gearshape",
+            iconColor: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0),
+            category: .system,
+            settingsURL: "com.apple.Screen-Time-Settings.extension",
+            keywords: ["parental controls", "restrictions", "limits", "children"]
+        ),
+        PreferenceItem(
             id: "softwareupdate",
             title: "Software Update",
             sfSymbol: "arrow.triangle.2.circlepath",
-            iconColor: .systemBlue,
+            iconColor: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Software-Update-Settings.extension",
             keywords: ["update", "upgrade", "macos", "automatic updates"]
         ),
         PreferenceItem(
-            id: "accessibility",
-            title: "Accessibility",
-            sfSymbol: "accessibility",
-            iconColor: .systemBlue,
+            id: "speech",
+            title: "Speech",
+            sfSymbol: "waveform",
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Accessibility-Settings.extension",
-            keywords: ["voiceover", "zoom", "display", "hearing", "motor", "switch control"]
-        ),
-        PreferenceItem(
-            id: "screentime",
-            title: "Screen Time",
-            sfSymbol: "hourglass",
-            iconColor: .systemPurple,
-            category: .system,
-            settingsURL: "com.apple.Screen-Time-Settings.extension",
-            keywords: ["screen time", "parental controls", "app limits", "downtime"]
-        ),
-        PreferenceItem(
-            id: "lockscreen",
-            title: "Lock Screen",
-            sfSymbol: "lock.fill",
-            iconColor: .systemYellow,
-            category: .system,
-            settingsURL: "com.apple.Lock-Screen-Settings.extension",
-            keywords: ["lock", "login window", "message", "sleep", "screensaver"]
+            keywords: ["speech", "text to speech", "voiceover", "recognition", "dictation"]
         ),
         PreferenceItem(
             id: "startupdisk",
             title: "Startup Disk",
             sfSymbol: "internaldrive.fill",
-            iconColor: NSColor(calibratedRed: 0.50, green: 0.50, blue: 0.55, alpha: 1.0),
+            iconColor: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Startup-Disk-Settings.extension",
             keywords: ["startup", "boot", "disk", "volume"]
@@ -395,28 +323,19 @@ extension PreferenceItem {
             id: "timemachine",
             title: "Time Machine",
             sfSymbol: "clock.arrow.circlepath",
-            iconColor: .systemGreen,
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0),
             category: .system,
             settingsURL: "com.apple.Time-Machine-Settings.extension",
             keywords: ["backup", "time machine", "restore"]
         ),
         PreferenceItem(
-            id: "gamecenter",
-            title: "Game Center",
-            sfSymbol: "gamecontroller.fill",
-            iconColor: .systemPink,
+            id: "universalaccess",
+            title: "Universal Access",
+            sfSymbol: "accessibility",
+            iconColor: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0),
             category: .system,
-            settingsURL: "com.apple.Game-Center-Settings.extension",
-            keywords: ["game center", "gaming", "friends", "achievements"]
-        ),
-        PreferenceItem(
-            id: "wallet",
-            title: "Wallet & Apple Pay",
-            sfSymbol: "creditcard.fill",
-            iconColor: .systemYellow,
-            category: .system,
-            settingsURL: "com.apple.WalletSettingsExtension",
-            keywords: ["wallet", "apple pay", "credit card", "payment"]
+            settingsURL: "com.apple.Accessibility-Settings.extension",
+            keywords: ["voiceover", "zoom", "display", "hearing", "universal access", "accessibility"]
         ),
     ]
 }

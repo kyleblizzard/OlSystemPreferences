@@ -2,7 +2,7 @@ import Cocoa
 
 class GeneralPaneViewController: NSViewController, PaneProtocol {
 
-    var paneIdentifier: String { "general" }
+    var paneIdentifier: String { "appearance" }
     var paneTitle: String { "Appearance" }
     var paneIcon: NSImage {
         NSImage(systemSymbolName: "paintbrush.fill", accessibilityDescription: "Appearance") ?? NSImage()
@@ -17,15 +17,10 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
 
     // MARK: - UI Elements
 
-    // Appearance (maps to Light / Dark / Auto)
+    // Appearance (Blue / Graphite — Snow Leopard style)
     private let appearanceLabel = NSTextField(labelWithString: "Appearance:")
-    private let blueButton = NSButton(radioButtonWithTitle: "Blue", target: nil, action: nil)
-    private let graphiteButton = NSButton(radioButtonWithTitle: "Graphite", target: nil, action: nil)
-
-    // Modern mapping: Blue = Light, Graphite = Dark, plus Auto
-    private let lightButton = AquaRadioButton(title: "Light", isSelected: false)
-    private let darkButton = AquaRadioButton(title: "Dark", isSelected: false)
-    private let autoButton = AquaRadioButton(title: "Auto", isSelected: false)
+    private let blueRadio = AquaRadioButton(title: "Blue", isSelected: true)
+    private let graphiteRadio = AquaRadioButton(title: "Graphite", isSelected: false)
 
     // Accent color (Highlight color in Snow Leopard)
     private let highlightColorLabel = NSTextField(labelWithString: "Highlight color:")
@@ -74,9 +69,18 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
     // Minimize when double-clicking title bar
     private let doubleClickTitleBarCheck = AquaCheckbox(title: "Minimize when double clicking a window title bar", isChecked: false)
 
-    // Sidebar icon size (Number of Recent Items equivalent)
-    private let sidebarSizeLabel = NSTextField(labelWithString: "Sidebar icon size:")
-    private let sidebarSizePopup = AquaPopUpButton(items: ["Small", "Medium", "Large"], selectedIndex: 0)
+    // Font smoothing
+    private let fontSmoothingLabel = NSTextField(labelWithString: "Font smoothing style:")
+    private let fontSmoothingPopup = AquaPopUpButton(items: [
+        "Automatic - best for main display",
+        "Standard - best for CRT",
+        "Light",
+        "Medium - best for Flat Panel",
+        "Strong"
+    ], selectedIndex: 0)
+    private let fontSmoothingSizeLabel = NSTextField(labelWithString: "Turn off text smoothing for font sizes")
+    private let fontSmoothingSizePopup = AquaPopUpButton(items: ["4", "6", "8", "10", "12"], selectedIndex: 2)
+    private let fontSmoothingSizeSuffix = NSTextField(labelWithString: "and smaller")
 
     // Number of Recent Items
     private let recentItemsLabel = NSTextField(labelWithString: "Number of recent items:")
@@ -120,17 +124,15 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         appearanceContent.alignment = .leading
         appearanceContent.spacing = 10
 
-        // Appearance row (Light / Dark / Auto)
+        // Appearance row (Blue / Graphite)
         styleAllLabels()
-        lightButton.groupTag = 1
-        darkButton.groupTag = 1
-        autoButton.groupTag = 1
-        lightButton.target = self; lightButton.action = #selector(appearanceChanged(_:))
-        darkButton.target = self; darkButton.action = #selector(appearanceChanged(_:))
-        autoButton.target = self; autoButton.action = #selector(appearanceChanged(_:))
+        blueRadio.groupTag = 1
+        graphiteRadio.groupTag = 1
+        blueRadio.target = self; blueRadio.action = #selector(appearanceChanged(_:))
+        graphiteRadio.target = self; graphiteRadio.action = #selector(appearanceChanged(_:))
         let appearanceRow = SnowLeopardPaneHelper.makeRow(
             label: appearanceLabel,
-            controls: [lightButton, darkButton, autoButton]
+            controls: [blueRadio, graphiteRadio]
         )
         appearanceContent.addArrangedSubview(appearanceRow)
 
@@ -230,14 +232,25 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         let windowSep = SnowLeopardPaneHelper.makeSeparator(width: 560)
         windowContent.addArrangedSubview(windowSep)
 
-        // Sidebar icon size
-        sidebarSizePopup.target = self
-        sidebarSizePopup.action = #selector(sidebarSizeChanged(_:))
-        let sidebarRow = SnowLeopardPaneHelper.makeRow(
-            label: sidebarSizeLabel,
-            controls: [sidebarSizePopup]
+        // Font smoothing style
+        fontSmoothingPopup.target = self
+        fontSmoothingPopup.action = #selector(fontSmoothingChanged(_:))
+        let fontSmoothingRow = SnowLeopardPaneHelper.makeRow(
+            label: fontSmoothingLabel,
+            controls: [fontSmoothingPopup]
         )
-        windowContent.addArrangedSubview(sidebarRow)
+        windowContent.addArrangedSubview(fontSmoothingRow)
+
+        // Font smoothing size threshold
+        fontSmoothingSizeSuffix.font = SnowLeopardFonts.label(size: 11)
+        fontSmoothingSizeSuffix.textColor = NSColor(white: 0.15, alpha: 1.0)
+        fontSmoothingSizePopup.target = self
+        fontSmoothingSizePopup.action = #selector(fontSmoothingSizeChanged(_:))
+        let fontSizeRow = SnowLeopardPaneHelper.makeRow(
+            label: fontSmoothingSizeLabel,
+            controls: [fontSmoothingSizePopup, fontSmoothingSizeSuffix]
+        )
+        windowContent.addArrangedSubview(fontSizeRow)
 
         windowBox.contentView = windowContent
         mainStack.addArrangedSubview(windowBox)
@@ -291,24 +304,17 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
     // MARK: - PaneProtocol
 
     func reloadFromSystem() {
-        // Appearance (Light / Dark / Auto)
-        let style = defaults.string(forKey: "AppleInterfaceStyle")
-        let autoSwitch = defaults.bool(forKey: "AppleInterfaceStyleSwitchesAutomatically") ?? false
-
-        lightButton.isSelected = false
-        darkButton.isSelected = false
-        autoButton.isSelected = false
-
-        if autoSwitch {
-            autoButton.isSelected = true
-        } else if style == "Dark" {
-            darkButton.isSelected = true
+        // Appearance (Blue / Graphite — maps to accent color)
+        let accent = defaults.integer(forKey: "AppleAccentColor") ?? 4 // blue default
+        if accent == -1 {
+            blueRadio.isSelected = false
+            graphiteRadio.isSelected = true
         } else {
-            lightButton.isSelected = true
+            blueRadio.isSelected = true
+            graphiteRadio.isSelected = false
         }
 
-        // Accent color
-        let accent = defaults.integer(forKey: "AppleAccentColor") ?? 4 // blue default
+        // Highlight color (accent)
         for btn in accentColorButtons {
             btn.layer?.borderWidth = 0
         }
@@ -341,9 +347,15 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         let doubleClickMinimize = defaults.string(forKey: "AppleActionOnDoubleClick") ?? "Maximize"
         doubleClickTitleBarCheck.isChecked = (doubleClickMinimize == "Minimize")
 
-        // Sidebar size
-        let sidebarSize = defaults.integer(forKey: "NSTableViewDefaultSizeMode") ?? 2
-        sidebarSizePopup.selectedIndex = max(0, sidebarSize - 1)
+        // Font smoothing (AppleFontSmoothing: 0=off, 1=light, 2=medium, 3=strong)
+        let fontSmoothing = defaults.integer(forKey: "AppleFontSmoothing") ?? 0
+        // Map: 0=Automatic, 1=Standard, 2=Light, 3=Medium, 4=Strong — approximate
+        fontSmoothingPopup.selectedIndex = min(fontSmoothing, 4)
+
+        let smoothingSize = defaults.integer(forKey: "AppleAntiAliasingThreshold") ?? 8
+        if let idx = ["4", "6", "8", "10", "12"].firstIndex(of: "\(smoothingSize)") {
+            fontSmoothingSizePopup.selectedIndex = idx
+        }
 
         // Recent items — read from com.apple.recentitems domain
         loadRecentItemsCount()
@@ -382,20 +394,19 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
     // MARK: - Actions
 
     @objc private func appearanceChanged(_ sender: AquaRadioButton) {
-        if sender === lightButton {
-            defaults.set(nil, forKey: "AppleInterfaceStyle")
-            defaults.setBool(false, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            darkButton.isSelected = false; autoButton.isSelected = false
-        } else if sender === darkButton {
-            defaults.setString("Dark", forKey: "AppleInterfaceStyle")
-            defaults.setBool(false, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            lightButton.isSelected = false; autoButton.isSelected = false
-        } else if sender === autoButton {
-            defaults.setBool(true, forKey: "AppleInterfaceStyleSwitchesAutomatically")
-            lightButton.isSelected = false; darkButton.isSelected = false
+        if sender === blueRadio {
+            // Blue = default accent color
+            defaults.setInteger(4, forKey: "AppleAccentColor")
+            graphiteRadio.isSelected = false
+        } else if sender === graphiteRadio {
+            // Graphite = -1 accent color
+            defaults.setInteger(-1, forKey: "AppleAccentColor")
+            blueRadio.isSelected = false
         }
+        // Update highlight color buttons to match
+        reloadFromSystem()
         DistributedNotificationCenter.default().post(
-            name: .init("AppleInterfaceThemeChangedNotification"), object: nil
+            name: .init("AppleColorPreferencesChangedNotification"), object: nil
         )
     }
 
@@ -437,8 +448,13 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
         defaults.setString(value, forKey: "AppleActionOnDoubleClick")
     }
 
-    @objc private func sidebarSizeChanged(_ sender: AquaPopUpButton) {
-        defaults.setInteger(sender.selectedIndex + 1, forKey: "NSTableViewDefaultSizeMode")
+    @objc private func fontSmoothingChanged(_ sender: AquaPopUpButton) {
+        defaults.setInteger(sender.selectedIndex, forKey: "AppleFontSmoothing")
+    }
+
+    @objc private func fontSmoothingSizeChanged(_ sender: AquaPopUpButton) {
+        let sizes = [4, 6, 8, 10, 12]
+        defaults.setInteger(sizes[sender.selectedIndex], forKey: "AppleAntiAliasingThreshold")
     }
 
     @objc private func recentItemsChanged(_ sender: AquaPopUpButton) {
@@ -463,7 +479,7 @@ class GeneralPaneViewController: NSViewController, PaneProtocol {
     // MARK: - Helpers
 
     private func styleAllLabels() {
-        let labels = [appearanceLabel, highlightColorLabel, scrollBarsLabel, scrollClickLabel, sidebarSizeLabel, recentItemsLabel]
+        let labels = [appearanceLabel, highlightColorLabel, scrollBarsLabel, scrollClickLabel, fontSmoothingLabel, fontSmoothingSizeLabel, recentItemsLabel]
         for label in labels {
             label.font = SnowLeopardFonts.label(size: 11)
             label.textColor = NSColor(white: 0.15, alpha: 1.0)

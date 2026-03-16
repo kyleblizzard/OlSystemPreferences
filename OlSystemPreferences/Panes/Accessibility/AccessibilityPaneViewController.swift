@@ -4,7 +4,7 @@ class AccessibilityPaneViewController: NSViewController, PaneProtocol {
 
     // MARK: - PaneProtocol
 
-    var paneIdentifier: String { "accessibility" }
+    var paneIdentifier: String { "universalaccess" }
     var paneTitle: String { "Universal Access" }
     var paneIcon: NSImage {
         NSImage(systemSymbolName: "accessibility", accessibilityDescription: "Universal Access") ?? NSImage()

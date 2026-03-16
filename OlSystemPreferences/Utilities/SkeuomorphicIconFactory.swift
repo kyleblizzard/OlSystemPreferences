@@ -151,50 +151,41 @@ enum SkeuomorphicIconFactory {
         let color: NSColor
     }
 
-    /// Snow Leopard-inspired color palette for each pane
+    /// Snow Leopard 10.6 color palette for each pane
     private static let iconPresets: [String: IconPreset] = [
         // Personal
-        "appearance":     IconPreset(symbol: "paintbrush.fill", color: NSColor(calibratedRed: 0.55, green: 0.35, blue: 0.75, alpha: 1.0)),
-        "wallpaper":      IconPreset(symbol: "photo.fill", color: NSColor(calibratedRed: 0.20, green: 0.55, blue: 0.80, alpha: 1.0)),
-        "screensaver":    IconPreset(symbol: "sparkles.tv.fill", color: NSColor(calibratedRed: 0.35, green: 0.30, blue: 0.70, alpha: 1.0)),
-        "dock":           IconPreset(symbol: "dock.rectangle", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
-        "notifications":  IconPreset(symbol: "bell.badge.fill", color: NSColor(calibratedRed: 0.85, green: 0.25, blue: 0.25, alpha: 1.0)),
-        "focus":          IconPreset(symbol: "moon.fill", color: NSColor(calibratedRed: 0.40, green: 0.35, blue: 0.75, alpha: 1.0)),
-        "controlcenter":  IconPreset(symbol: "switch.2", color: NSColor(calibratedRed: 0.45, green: 0.45, blue: 0.52, alpha: 1.0)),
-        "spotlight":      IconPreset(symbol: "magnifyingglass", color: NSColor(calibratedRed: 0.75, green: 0.30, blue: 0.55, alpha: 1.0)),
-        "exposespaces":   IconPreset(symbol: "rectangle.3.group", color: NSColor(calibratedRed: 0.25, green: 0.45, blue: 0.80, alpha: 1.0)),
+        "appearance":         IconPreset(symbol: "paintbrush.fill", color: NSColor(calibratedRed: 0.55, green: 0.35, blue: 0.75, alpha: 1.0)),
+        "desktopscreensaver": IconPreset(symbol: "photo.fill", color: NSColor(calibratedRed: 0.20, green: 0.55, blue: 0.80, alpha: 1.0)),
+        "dock":               IconPreset(symbol: "dock.rectangle", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
+        "exposespaces":       IconPreset(symbol: "rectangle.3.group", color: NSColor(calibratedRed: 0.25, green: 0.45, blue: 0.80, alpha: 1.0)),
+        "languagetext":       IconPreset(symbol: "character.book.closed.fill", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
+        "security":           IconPreset(symbol: "lock.fill", color: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0)),
+        "spotlight":          IconPreset(symbol: "magnifyingglass", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
 
         // Hardware
-        "displays":       IconPreset(symbol: "display", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.78, alpha: 1.0)),
-        "sound":          IconPreset(symbol: "speaker.wave.3.fill", color: NSColor(calibratedRed: 0.80, green: 0.35, blue: 0.50, alpha: 1.0)),
-        "keyboard":       IconPreset(symbol: "keyboard", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
-        "mouse":          IconPreset(symbol: "computermouse.fill", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
-        "trackpad":       IconPreset(symbol: "rectangle.and.hand.point.up.left.fill", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
-        "printers":       IconPreset(symbol: "printer.fill", color: NSColor(calibratedRed: 0.35, green: 0.55, blue: 0.75, alpha: 1.0)),
-        "battery":        IconPreset(symbol: "battery.100.bolt", color: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0)),
+        "cdsdvds":            IconPreset(symbol: "opticaldisc.fill", color: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0)),
+        "displays":           IconPreset(symbol: "display", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.78, alpha: 1.0)),
+        "energysaver":        IconPreset(symbol: "battery.100.bolt", color: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0)),
+        "keyboard":           IconPreset(symbol: "keyboard", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
+        "mouse":              IconPreset(symbol: "computermouse.fill", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
+        "printfax":           IconPreset(symbol: "printer.fill", color: NSColor(calibratedRed: 0.35, green: 0.55, blue: 0.75, alpha: 1.0)),
+        "sound":              IconPreset(symbol: "speaker.wave.3.fill", color: NSColor(calibratedRed: 0.80, green: 0.35, blue: 0.50, alpha: 1.0)),
+        "trackpad":           IconPreset(symbol: "rectangle.and.hand.point.up.left.fill", color: NSColor(calibratedRed: 0.42, green: 0.44, blue: 0.52, alpha: 1.0)),
 
         // Internet & Wireless
-        "appleid":        IconPreset(symbol: "person.crop.circle.fill", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
-        "wifi":           IconPreset(symbol: "wifi", color: NSColor(calibratedRed: 0.25, green: 0.55, blue: 0.85, alpha: 1.0)),
-        "bluetooth":      IconPreset(symbol: "wave.3.right", color: NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.85, alpha: 1.0)),
-        "network":        IconPreset(symbol: "network", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
-        "internetaccounts": IconPreset(symbol: "at", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
-        "sharing":        IconPreset(symbol: "person.2.fill", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
+        "bluetooth":          IconPreset(symbol: "wave.3.right", color: NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.85, alpha: 1.0)),
+        "mobileme":           IconPreset(symbol: "cloud.fill", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
+        "network":            IconPreset(symbol: "network", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
+        "sharing":            IconPreset(symbol: "person.2.fill", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
 
         // System
-        "general":        IconPreset(symbol: "gearshape", color: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0)),
-        "users":          IconPreset(symbol: "person.2.fill", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
-        "passwords":      IconPreset(symbol: "key.fill", color: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0)),
-        "touchid":        IconPreset(symbol: "touchid", color: NSColor(calibratedRed: 0.80, green: 0.25, blue: 0.30, alpha: 1.0)),
-        "privacy":        IconPreset(symbol: "hand.raised.fill", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
-        "datetime":       IconPreset(symbol: "clock.fill", color: NSColor(calibratedRed: 0.25, green: 0.48, blue: 0.80, alpha: 1.0)),
-        "softwareupdate": IconPreset(symbol: "arrow.triangle.2.circlepath", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
-        "accessibility":  IconPreset(symbol: "accessibility", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
-        "screentime":     IconPreset(symbol: "hourglass", color: NSColor(calibratedRed: 0.60, green: 0.30, blue: 0.75, alpha: 1.0)),
-        "lockscreen":     IconPreset(symbol: "lock.fill", color: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0)),
-        "startupdisk":    IconPreset(symbol: "internaldrive.fill", color: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0)),
-        "timemachine":    IconPreset(symbol: "clock.arrow.circlepath", color: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0)),
-        "gamecenter":     IconPreset(symbol: "gamecontroller.fill", color: NSColor(calibratedRed: 0.80, green: 0.35, blue: 0.55, alpha: 1.0)),
-        "wallet":         IconPreset(symbol: "creditcard.fill", color: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0)),
+        "accounts":           IconPreset(symbol: "person.2.fill", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
+        "datetime":           IconPreset(symbol: "clock.fill", color: NSColor(calibratedRed: 0.25, green: 0.48, blue: 0.80, alpha: 1.0)),
+        "parentalcontrols":   IconPreset(symbol: "person.2.badge.gearshape", color: NSColor(calibratedRed: 0.85, green: 0.70, blue: 0.20, alpha: 1.0)),
+        "softwareupdate":     IconPreset(symbol: "arrow.triangle.2.circlepath", color: NSColor(calibratedRed: 0.30, green: 0.50, blue: 0.80, alpha: 1.0)),
+        "speech":             IconPreset(symbol: "waveform", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
+        "startupdisk":        IconPreset(symbol: "internaldrive.fill", color: NSColor(calibratedRed: 0.48, green: 0.48, blue: 0.55, alpha: 1.0)),
+        "timemachine":        IconPreset(symbol: "clock.arrow.circlepath", color: NSColor(calibratedRed: 0.25, green: 0.68, blue: 0.35, alpha: 1.0)),
+        "universalaccess":    IconPreset(symbol: "accessibility", color: NSColor(calibratedRed: 0.25, green: 0.50, blue: 0.85, alpha: 1.0)),
     ]
 }

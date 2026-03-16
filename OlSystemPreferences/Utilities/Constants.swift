@@ -2,7 +2,7 @@ import Cocoa
 
 enum AppConstants {
     // Window
-    static let gridWindowSize = NSSize(width: 668, height: 700)
+    static let gridWindowSize = NSSize(width: 668, height: 668)
     static let windowMinSize = NSSize(width: 668, height: 400)
     static let animationDuration: TimeInterval = 0.25
 
@@ -97,10 +97,6 @@ enum SnowLeopardColors {
 
     // Pane background (lighter gray used inside pane views)
     static let paneBackground = NSColor(white: 0.93, alpha: 1.0)
-
-    // Mode bar
-    static let modeBarBackground = NSColor(white: 0.82, alpha: 1.0)
-    static let modeBarBorder = NSColor(white: 0.68, alpha: 1.0)
 
     // Toolbar nav control
     static let navGradientTop = NSColor(white: 0.92, alpha: 1.0)

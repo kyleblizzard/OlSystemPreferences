@@ -50,7 +50,7 @@ class RedirectPaneViewController: NSViewController, PaneProtocol {
         iconView.image = _paneIcon
         iconView.imageScaling = .scaleProportionallyUpOrDown
         // Tint the icon
-        if let img = NSImage(systemSymbolName: paneIdentifier == "appleid" ? "person.crop.circle.fill" : (_paneIcon.name() ?? "gearshape"), accessibilityDescription: nil) {
+        if let img = NSImage(systemSymbolName: _paneIcon.name() ?? "gearshape", accessibilityDescription: nil) {
             let config = NSImage.SymbolConfiguration(pointSize: 48, weight: .regular)
             iconView.image = img.withSymbolConfiguration(config) ?? img
         }

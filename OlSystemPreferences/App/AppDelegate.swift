@@ -90,8 +90,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let viewMenu = NSMenu(title: "View")
         viewMenuItem.submenu = viewMenu
 
-        let iconsItem = NSMenuItem(title: "as Icons", action: #selector(viewAsIcons(_:)), keyEquivalent: "1")
-        viewMenu.addItem(iconsItem)
+        let showAllItem = NSMenuItem(title: "Show All Preferences", action: #selector(viewAsIcons(_:)), keyEquivalent: "l")
+        viewMenu.addItem(showAllItem)
+        viewMenu.addItem(NSMenuItem.separator())
         let coverFlowItem = NSMenuItem(title: "as Cover Flow", action: #selector(viewAsCoverFlow(_:)), keyEquivalent: "2")
         viewMenu.addItem(coverFlowItem)
         viewMenu.addItem(NSMenuItem.separator())
