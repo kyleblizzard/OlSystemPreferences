@@ -39,16 +39,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         aboutWindowController.window?.makeKeyAndOrderFront(nil)
     }
 
-    @objc private func showDashboard(_ sender: Any?) {
-        mainWindowController?.toggleDashboard(nil)
-    }
-
     @objc private func viewAsIcons(_ sender: Any?) {
         mainWindowController?.switchToGrid()
-    }
-
-    @objc private func viewAsCoverFlow(_ sender: Any?) {
-        mainWindowController?.switchToCoverFlow()
     }
 
     // MARK: - Menu Bar
@@ -92,14 +84,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let showAllItem = NSMenuItem(title: "Show All Preferences", action: #selector(viewAsIcons(_:)), keyEquivalent: "l")
         viewMenu.addItem(showAllItem)
-        viewMenu.addItem(NSMenuItem.separator())
-        let coverFlowItem = NSMenuItem(title: "as Cover Flow", action: #selector(viewAsCoverFlow(_:)), keyEquivalent: "2")
-        viewMenu.addItem(coverFlowItem)
-        viewMenu.addItem(NSMenuItem.separator())
-        let dashboardItem = NSMenuItem(title: "Dashboard", action: #selector(showDashboard(_:)), keyEquivalent: "")
-        dashboardItem.keyEquivalent = String(UnicodeScalar(NSF4FunctionKey)!)
-        dashboardItem.keyEquivalentModifierMask = []
-        viewMenu.addItem(dashboardItem)
 
         // Window menu
         let windowMenuItem = NSMenuItem()

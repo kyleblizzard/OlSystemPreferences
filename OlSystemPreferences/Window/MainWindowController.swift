@@ -10,10 +10,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
 
     private let gridViewController = GridViewController()
     private let navControl = SnowLeopardNavControl(frame: NSRect(x: 0, y: 0, width: 56, height: 24))
-    private lazy var launchpadController = LaunchpadWindowController()
-    private lazy var dashboardController = DashboardWindowController()
-    private lazy var coverFlowVC = CoverFlowViewController()
-
     private let contentContainer = NSView()
 
     // Unified navigation history across all modes
@@ -49,9 +45,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
 
         navControl.backAction = { [weak self] in self?.goBack() }
         navControl.forwardAction = { [weak self] in self?.goForward() }
-
-        launchpadController.onDismiss = { [weak self] in self?.overlayDidDismiss() }
-        dashboardController.onDismiss = { [weak self] in self?.overlayDidDismiss() }
 
         setupToolbar()
         setupContentContainer()
@@ -122,11 +115,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         updateNavButtons()
     }
 
-    /// Called when Launchpad/Dashboard dismiss themselves (ESC, background click, etc.)
-    private func overlayDidDismiss() {
-        // No-op — overlays are independent now
-    }
-
     private func updateNavButtons() {
         navControl.backEnabled = !navBackStack.isEmpty
         navControl.forwardEnabled = !navForwardStack.isEmpty
@@ -194,32 +182,6 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
 
     @objc func switchToGrid() {
         navigateTo(.grid)
-    }
-
-    func switchToCoverFlow() {
-        guard let window = window else { return }
-        coverFlowVC.view.translatesAutoresizingMaskIntoConstraints = false
-        // Show cover flow as overlay in a sheet or separate window
-        let coverFlowWindow = NSWindow(
-            contentRect: NSRect(origin: .zero, size: NSSize(width: 768, height: 680)),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        coverFlowWindow.title = "Cover Flow"
-        coverFlowWindow.contentView = coverFlowVC.view
-        coverFlowWindow.appearance = NSAppearance(named: .aqua)
-        coverFlowWindow.center()
-        window.addChildWindow(coverFlowWindow, ordered: .above)
-        coverFlowWindow.makeKeyAndOrderFront(nil)
-    }
-
-    @objc func toggleDashboard(_ sender: Any?) {
-        dashboardController.show()
-    }
-
-    @objc func toggleLaunchpad(_ sender: Any?) {
-        launchpadController.show()
     }
 
     // MARK: - NSToolbarDelegate
