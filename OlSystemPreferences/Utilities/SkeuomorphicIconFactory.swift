@@ -138,8 +138,15 @@ enum SkeuomorphicIconFactory {
         return image
     }
 
-    /// Specific icon presets matching Snow Leopard's color palette
+    /// Specific icon presets matching Snow Leopard's color palette.
+    /// Checks the asset catalog first for a hand-crafted Aqua icon (e.g. from Grok Imagine),
+    /// then falls back to procedural SF Symbol rendering if no asset exists.
     static func presetIcon(for id: String, size: CGFloat = 32) -> NSImage? {
+        // Check asset catalog first — Grok Imagine icons are stored as "paneicon_[id]"
+        if let assetImage = NSImage(named: "paneicon_\(id)") {
+            assetImage.size = NSSize(width: size, height: size)
+            return assetImage
+        }
         guard let preset = iconPresets[id] else { return nil }
         return icon(sfSymbol: preset.symbol, baseColor: preset.color, size: size)
     }

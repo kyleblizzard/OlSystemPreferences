@@ -26,6 +26,12 @@ class SoftwareUpdatePaneViewController: NSViewController, PaneProtocol {
     private let macOSVersionLabel = NSTextField(labelWithString: "")
     private let macOSBuildLabel = NSTextField(labelWithString: "")
 
+    // "About This Mac" mini section
+    private let processorLabel = NSTextField(labelWithString: "")
+    private let memoryLabel = NSTextField(labelWithString: "")
+    private let serialLabel = NSTextField(labelWithString: "")
+    private let diskLabel = NSTextField(labelWithString: "")
+
     private let autoCheckBox = NSButton(checkboxWithTitle: "Check for updates automatically", target: nil, action: nil)
     private let autoDownloadBox = NSButton(checkboxWithTitle: "Download newly available updates in background", target: nil, action: nil)
     private let autoInstallBox = NSButton(checkboxWithTitle: "Install macOS updates", target: nil, action: nil)
@@ -96,6 +102,14 @@ class SoftwareUpdatePaneViewController: NSViewController, PaneProtocol {
         macOSBuildLabel.font = SnowLeopardFonts.label(size: 10)
         macOSBuildLabel.textColor = .secondaryLabelColor
         versionColumn.addArrangedSubview(macOSBuildLabel)
+
+        // Hardware info labels (mini "About This Mac")
+        let hwLabels = [processorLabel, memoryLabel, serialLabel, diskLabel]
+        for label in hwLabels {
+            label.font = SnowLeopardFonts.label(size: 10)
+            label.textColor = .secondaryLabelColor
+            versionColumn.addArrangedSubview(label)
+        }
 
         infoStack.addArrangedSubview(versionColumn)
 
@@ -178,6 +192,19 @@ class SoftwareUpdatePaneViewController: NSViewController, PaneProtocol {
         // Mac model
         macModelLabel.stringValue = getMacModel()
 
+        // Processor
+        processorLabel.stringValue = "Processor: \(getProcessorName())"
+
+        // Memory
+        let ramGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
+        memoryLabel.stringValue = "Memory: \(ramGB) GB"
+
+        // Serial number
+        serialLabel.stringValue = "Serial: \(getSerialNumber())"
+
+        // Disk space
+        diskLabel.stringValue = "Disk: \(getDiskInfo())"
+
         // Update settings from com.apple.SoftwareUpdate domain
         let suDomain = "com.apple.SoftwareUpdate"
 
@@ -221,9 +248,46 @@ class SoftwareUpdatePaneViewController: NSViewController, PaneProtocol {
     // MARK: - Helpers
 
     private func getMacModel() -> String {
+        return runCommand("/usr/sbin/sysctl", arguments: ["-n", "hw.model"])?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Mac"
+    }
+
+    /// Read the CPU brand string (e.g. "Apple M1 Pro" or "Intel Core i9-9900K")
+    private func getProcessorName() -> String {
+        return runCommand("/usr/sbin/sysctl", arguments: ["-n", "machdep.cpu.brand_string"])?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+    }
+
+    /// Read the Mac serial number from IOKit
+    private func getSerialNumber() -> String {
+        guard let output = runCommand("/usr/sbin/ioreg", arguments: ["-l", "-d", "2"]) else { return "Unknown" }
+        for line in output.components(separatedBy: "\n") {
+            if line.contains("IOPlatformSerialNumber") {
+                let parts = line.components(separatedBy: "\"")
+                if parts.count >= 4 { return parts[3] }
+            }
+        }
+        return "Unknown"
+    }
+
+    /// Read total and free disk space for the boot volume
+    private func getDiskInfo() -> String {
+        do {
+            let attrs = try FileManager.default.attributesOfFileSystem(forPath: "/")
+            let total = (attrs[.systemSize] as? Int64) ?? 0
+            let free = (attrs[.systemFreeSize] as? Int64) ?? 0
+            let totalGB = Double(total) / 1_000_000_000
+            let freeGB = Double(free) / 1_000_000_000
+            return String(format: "%.0f GB total, %.0f GB available", totalGB, freeGB)
+        } catch {
+            return "Unknown"
+        }
+    }
+
+    private func runCommand(_ path: String, arguments: [String]) -> String? {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/sysctl")
-        process.arguments = ["-n", "hw.model"]
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = arguments
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = Pipe()
@@ -231,10 +295,9 @@ class SoftwareUpdatePaneViewController: NSViewController, PaneProtocol {
             try process.run()
             process.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let model = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Mac"
-            return model
+            return String(data: data, encoding: .utf8)
         } catch {
-            return "Mac"
+            return nil
         }
     }
 

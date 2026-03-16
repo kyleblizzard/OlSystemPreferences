@@ -51,6 +51,11 @@ class NetworkPaneViewController: NSViewController, PaneProtocol {
     private let searchDomainsLabel = NSTextField(labelWithString: "")
     private let renewStatusLabel = NSTextField(labelWithString: "")
 
+    // Wi-Fi detail labels (shown when a Wi-Fi service is selected)
+    private let wifiSSIDLabel = NSTextField(labelWithString: "")
+    private let wifiSignalLabel = NSTextField(labelWithString: "")
+    private let wifiSpeedLabel = NSTextField(labelWithString: "")
+
     // MARK: - Load View
 
     override func loadView() {
@@ -191,6 +196,34 @@ class NetworkPaneViewController: NSViewController, PaneProtocol {
         macLabel.font = SnowLeopardFonts.label(size: 11)
         macLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
         detailStack.addArrangedSubview(macRow)
+
+        // Wi-Fi specific rows (hidden when non-Wi-Fi selected)
+        wifiSSIDLabel.font = SnowLeopardFonts.label(size: 11)
+        wifiSSIDLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
+        let ssidRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Wi-Fi Network:"),
+            controls: [wifiSSIDLabel]
+        )
+        ssidRow.identifier = NSUserInterfaceItemIdentifier("wifiSSID")
+        detailStack.addArrangedSubview(ssidRow)
+
+        wifiSignalLabel.font = SnowLeopardFonts.label(size: 11)
+        wifiSignalLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
+        let signalRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Signal Strength:"),
+            controls: [wifiSignalLabel]
+        )
+        signalRow.identifier = NSUserInterfaceItemIdentifier("wifiSignal")
+        detailStack.addArrangedSubview(signalRow)
+
+        wifiSpeedLabel.font = SnowLeopardFonts.label(size: 11)
+        wifiSpeedLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
+        let speedRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Link Speed:"),
+            controls: [wifiSpeedLabel]
+        )
+        speedRow.identifier = NSUserInterfaceItemIdentifier("wifiSpeed")
+        detailStack.addArrangedSubview(speedRow)
 
         detailStack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 360))
 
@@ -367,6 +400,55 @@ class NetworkPaneViewController: NSViewController, PaneProtocol {
         ipv6Label.stringValue = iface.ipv6Address.isEmpty ? "N/A" : iface.ipv6Address
         macLabel.stringValue = iface.macAddress.isEmpty ? "N/A" : iface.macAddress
         renewStatusLabel.stringValue = ""
+
+        // Show/hide Wi-Fi details based on whether this is a Wi-Fi interface
+        let isWifi = iface.name.lowercased().contains("wi-fi") || iface.name.lowercased().contains("airport")
+        showWifiDetails(isWifi, serviceName: iface.name)
+    }
+
+    /// Show or hide the Wi-Fi-specific detail rows and populate them with live data
+    private func showWifiDetails(_ show: Bool, serviceName: String) {
+        // Find the Wi-Fi rows by identifier
+        guard let detailStack = wifiSSIDLabel.superview?.superview as? NSStackView else { return }
+        for subview in detailStack.arrangedSubviews {
+            if let id = subview.identifier?.rawValue, id.hasPrefix("wifi") {
+                subview.isHidden = !show
+            }
+        }
+
+        guard show else { return }
+
+        // Use CoreWLAN via shell to get Wi-Fi info (avoids linking framework directly)
+        let wifiInfo = getWiFiInfo()
+        wifiSSIDLabel.stringValue = wifiInfo.ssid.isEmpty ? "Not connected" : wifiInfo.ssid
+        wifiSignalLabel.stringValue = wifiInfo.rssi == 0 ? "N/A" : "\(wifiInfo.rssi) dBm"
+        wifiSpeedLabel.stringValue = wifiInfo.txRate == 0 ? "N/A" : "\(wifiInfo.txRate) Mbps"
+    }
+
+    /// Get Wi-Fi SSID, signal strength, and transmit rate from system_profiler
+    private func getWiFiInfo() -> (ssid: String, rssi: Int, txRate: Int) {
+        guard let output = runCommand("/usr/sbin/networksetup", arguments: ["-getairportnetwork", "en0"]) else {
+            return ("", 0, 0)
+        }
+        var ssid = ""
+        if output.contains("Current Wi-Fi Network:") {
+            ssid = output.replacingOccurrences(of: "Current Wi-Fi Network:", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        // Parse airport info for signal strength and tx rate
+        var rssi = 0
+        var txRate = 0
+        if let airportOutput = runCommand("/System/Library/PrivateFrameworks/Apple80211.framework/Resources/airport", arguments: ["-I"]) {
+            for line in airportOutput.components(separatedBy: "\n") {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("agrCtlRSSI:") {
+                    rssi = Int(trimmed.replacingOccurrences(of: "agrCtlRSSI:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                } else if trimmed.hasPrefix("lastTxRate:") {
+                    txRate = Int(trimmed.replacingOccurrences(of: "lastTxRate:", with: "").trimmingCharacters(in: .whitespaces)) ?? 0
+                }
+            }
+        }
+        return (ssid, rssi, txRate)
     }
 
     private func getDNS(service: String) -> String {

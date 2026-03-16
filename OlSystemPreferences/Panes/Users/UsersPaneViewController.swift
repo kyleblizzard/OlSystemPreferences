@@ -24,6 +24,7 @@ class UsersPaneViewController: NSViewController, PaneProtocol {
         let isAdmin: Bool
         let isCurrent: Bool
         var image: NSImage?
+        var diskUsage: String = ""
     }
 
     private var users: [UserAccount] = []
@@ -49,6 +50,7 @@ class UsersPaneViewController: NSViewController, PaneProtocol {
     private let shortNameValueLabel = NSTextField(labelWithString: "")
     private let homeDirValueLabel = NSTextField(labelWithString: "")
     private let changePasswordButton = NSButton()
+    private let diskUsageValueLabel = NSTextField(labelWithString: "")
     private let loginItemsTable = NSTableView()
 
     // MARK: - Load View
@@ -156,6 +158,15 @@ class UsersPaneViewController: NSViewController, PaneProtocol {
             controls: [homeDirValueLabel]
         )
         detailStack.addArrangedSubview(homeRow)
+
+        // Disk usage
+        diskUsageValueLabel.font = SnowLeopardFonts.label(size: 11)
+        diskUsageValueLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
+        let diskRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("Disk Usage:"),
+            controls: [diskUsageValueLabel]
+        )
+        detailStack.addArrangedSubview(diskRow)
 
         detailStack.addArrangedSubview(SnowLeopardPaneHelper.makeSeparator(width: 340))
 
@@ -461,7 +472,34 @@ class UsersPaneViewController: NSViewController, PaneProtocol {
         accountTypeLabel.stringValue = user.isAdmin ? "Admin" : "Standard"
         shortNameValueLabel.stringValue = user.shortName
         homeDirValueLabel.stringValue = user.homeDirectory
+        diskUsageValueLabel.stringValue = user.diskUsage.isEmpty ? "Calculating..." : user.diskUsage
         changePasswordButton.isEnabled = user.isCurrent
+
+        // Calculate disk usage in background if not yet done
+        if user.diskUsage.isEmpty {
+            let homeDir = user.homeDirectory
+            let userIndex = index
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let usage = self?.calculateDiskUsage(path: homeDir) ?? "Unknown"
+                DispatchQueue.main.async {
+                    guard let self = self, userIndex < self.users.count else { return }
+                    self.users[userIndex].diskUsage = usage
+                    if self.selectedIndex == userIndex {
+                        self.diskUsageValueLabel.stringValue = usage
+                    }
+                }
+            }
+        }
+    }
+
+    /// Calculate disk usage for a user's home directory
+    private func calculateDiskUsage(path: String) -> String {
+        guard let output = runCommand("/usr/bin/du", arguments: ["-sh", path]) else { return "Unknown" }
+        let parts = output.components(separatedBy: "\t")
+        if let size = parts.first?.trimmingCharacters(in: .whitespaces), !size.isEmpty {
+            return size
+        }
+        return "Unknown"
     }
 
     // MARK: - Actions

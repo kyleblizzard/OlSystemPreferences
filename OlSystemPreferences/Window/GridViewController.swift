@@ -12,6 +12,9 @@ class GridViewController: NSViewController {
     private var allItems: [PreferenceItem] = []
     private var sections: [(category: PaneCategory, items: [PreferenceItem])] = []
 
+    /// The current search query — used for dimming non-matching items instead of hiding them
+    private var currentSearchText: String = ""
+
     private lazy var scrollView: NSScrollView = {
         let sv = NSScrollView()
         sv.translatesAutoresizingMaskIntoConstraints = false
@@ -64,23 +67,23 @@ class GridViewController: NSViewController {
     }
 
     func filterItems(searchText: String) {
+        currentSearchText = searchText
         reloadAllItems(searchText: searchText)
     }
 
     private func reloadAllItems(searchText: String) {
-        let baseItems = PreferenceItem.allItems + detectedApps
-
-        if searchText.isEmpty {
-            allItems = baseItems
-        } else {
-            let query = searchText.lowercased()
-            allItems = baseItems.filter { item in
-                item.title.lowercased().contains(query) ||
-                item.keywords.contains(where: { $0.lowercased().contains(query) })
-            }
-        }
+        // Always show all items — Snow Leopard dims non-matches instead of hiding them
+        allItems = PreferenceItem.allItems + detectedApps
         rebuildSections()
         collectionView.reloadData()
+    }
+
+    /// Check whether a given item matches the current search query
+    private func itemMatchesSearch(_ item: PreferenceItem) -> Bool {
+        guard !currentSearchText.isEmpty else { return true }
+        let query = currentSearchText.lowercased()
+        return item.title.lowercased().contains(query) ||
+            item.keywords.contains(where: { $0.lowercased().contains(query) })
     }
 
     private func createLayout() -> NSCollectionViewFlowLayout {
@@ -126,6 +129,8 @@ extension GridViewController: NSCollectionViewDataSource {
             icon: item.icon,
             tintColor: item.isAppItem ? nil : item.iconColor
         )
+        // Dim non-matching items during search — Snow Leopard spotlight behavior
+        gridItem.isDimmed = !itemMatchesSearch(item)
         return gridItem
     }
 

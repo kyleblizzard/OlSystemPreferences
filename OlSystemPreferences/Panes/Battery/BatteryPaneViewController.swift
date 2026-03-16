@@ -38,6 +38,12 @@ class BatteryPaneViewController: NSViewController, PaneProtocol {
     private let wakeForNetworkCheck = NSButton(checkboxWithTitle: "Wake for network access", target: nil, action: nil)
     private let dimDisplayCheck = NSButton(checkboxWithTitle: "Automatically reduce brightness before display goes to sleep", target: nil, action: nil)
 
+    // Battery info labels (shown on laptops)
+    private let batteryPercentLabel = NSTextField(labelWithString: "")
+    private let batteryCycleLabel = NSTextField(labelWithString: "")
+    private let batteryConditionLabel = NSTextField(labelWithString: "")
+    private let powerSourceLabel = NSTextField(labelWithString: "")
+
     // MARK: - Load View
 
     override func loadView() {
@@ -141,6 +147,35 @@ class BatteryPaneViewController: NSViewController, PaneProtocol {
         outerStack.addArrangedSubview(settingsBox)
         settingsBox.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
 
+        // ===== Battery Info Section (laptops only) =====
+        let batteryBox = SnowLeopardPaneHelper.makeSectionBox(title: "Battery Information")
+        let batteryStack = NSStackView()
+        batteryStack.translatesAutoresizingMaskIntoConstraints = false
+        batteryStack.orientation = .vertical
+        batteryStack.alignment = .leading
+        batteryStack.spacing = 6
+        batteryStack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+
+        let batteryLabels: [(NSTextField, String)] = [
+            (powerSourceLabel, "Power Source:"),
+            (batteryPercentLabel, "Charge:"),
+            (batteryCycleLabel, "Cycle Count:"),
+            (batteryConditionLabel, "Condition:"),
+        ]
+        for (label, title) in batteryLabels {
+            label.font = SnowLeopardFonts.label(size: 11)
+            label.textColor = NSColor(white: 0.15, alpha: 1.0)
+            let row = SnowLeopardPaneHelper.makeRow(
+                label: SnowLeopardPaneHelper.makeLabel(title),
+                controls: [label]
+            )
+            batteryStack.addArrangedSubview(row)
+        }
+
+        batteryBox.contentView = batteryStack
+        outerStack.addArrangedSubview(batteryBox)
+        batteryBox.widthAnchor.constraint(equalTo: outerStack.widthAnchor, constant: -48).isActive = true
+
         // ===== Schedule Button =====
         let scheduleRow = NSStackView()
         scheduleRow.orientation = .horizontal
@@ -217,6 +252,54 @@ class BatteryPaneViewController: NSViewController, PaneProtocol {
         diskSleepCheck.state = sleepSettings.diskSleep ? .on : .off
         wakeForNetworkCheck.state = sleepSettings.wakeForNetwork ? .on : .off
         dimDisplayCheck.state = sleepSettings.dimOnBattery ? .on : .off
+
+        // Battery info (laptops) — parse from system_profiler SPPowerDataType
+        loadBatteryInfo()
+    }
+
+    /// Parse battery information from system_profiler for laptops
+    private func loadBatteryInfo() {
+        guard let output = runCommand("/usr/sbin/system_profiler", arguments: ["SPPowerDataType"]) else {
+            // Not a laptop or can't read power info — hide the battery section
+            powerSourceLabel.stringValue = "N/A"
+            batteryPercentLabel.stringValue = "N/A (Desktop Mac)"
+            batteryCycleLabel.stringValue = "N/A"
+            batteryConditionLabel.stringValue = "N/A"
+            return
+        }
+
+        var chargePercent = "N/A"
+        var cycleCount = "N/A"
+        var condition = "N/A"
+
+        for line in output.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("State of Charge") {
+                chargePercent = trimmed.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) ?? "N/A"
+                if !chargePercent.hasSuffix("%") && chargePercent != "N/A" {
+                    chargePercent += "%"
+                }
+            } else if trimmed.hasPrefix("Cycle Count") {
+                cycleCount = trimmed.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) ?? "N/A"
+            } else if trimmed.hasPrefix("Condition") {
+                condition = trimmed.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) ?? "N/A"
+            }
+        }
+
+        // Power source from pmset
+        if let psOutput = runCommand("/usr/bin/pmset", arguments: ["-g", "ps"]) {
+            if psOutput.contains("AC Power") {
+                powerSourceLabel.stringValue = "Power Adapter"
+            } else if psOutput.contains("Battery Power") {
+                powerSourceLabel.stringValue = "Battery"
+            } else {
+                powerSourceLabel.stringValue = "Unknown"
+            }
+        }
+
+        batteryPercentLabel.stringValue = chargePercent
+        batteryCycleLabel.stringValue = cycleCount
+        batteryConditionLabel.stringValue = condition
     }
 
     // MARK: - Parsing

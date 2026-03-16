@@ -97,12 +97,27 @@ class GridItemView: NSCollectionViewItem {
         return s
     }
 
+    /// Whether this item is dimmed during a Spotlight search (non-matching items get dimmed)
+    var isDimmed: Bool = false {
+        didSet { updateDimming() }
+    }
+
     func configure(title: String, icon: NSImage, tintColor: NSColor?) {
         titleLabel.stringValue = title
         iconImageView.image = icon
         // Icons are pre-rendered by SkeuomorphicIconFactory or are app icons — no tint needed
         iconImageView.symbolConfiguration = nil
         iconImageView.contentTintColor = nil
+    }
+
+    /// Animate opacity to show/hide the dimming overlay for search spotlight effect.
+    /// Non-matching items fade to ~30% opacity; matching items stay fully visible.
+    private func updateDimming() {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            context.allowsImplicitAnimation = true
+            self.view.animator().alphaValue = isDimmed ? 0.3 : 1.0
+        }
     }
 }
 

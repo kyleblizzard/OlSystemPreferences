@@ -21,6 +21,7 @@ class BluetoothPaneViewController: NSViewController, PaneProtocol {
         let name: String
         let type: String
         let connected: Bool
+        let batteryLevel: Int? // -1 = unknown, 0-100 = percentage
     }
 
     private var devices: [BluetoothDevice] = []
@@ -148,8 +149,13 @@ class BluetoothPaneViewController: NSViewController, PaneProtocol {
 
         let statusCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("connected"))
         statusCol.title = "Status"
-        statusCol.width = 120
+        statusCol.width = 80
         deviceTable.addTableColumn(statusCol)
+
+        let batteryCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("battery"))
+        batteryCol.title = "Battery"
+        batteryCol.width = 60
+        deviceTable.addTableColumn(batteryCol)
 
         deviceTable.delegate = self
         deviceTable.dataSource = self
@@ -238,6 +244,7 @@ class BluetoothPaneViewController: NSViewController, PaneProtocol {
         var currentName: String?
         var currentType = "Device"
         var currentConnected = false
+        var currentBattery: Int? = nil
         var inDevicesSection = false
 
         for line in lines {
@@ -255,22 +262,29 @@ class BluetoothPaneViewController: NSViewController, PaneProtocol {
             if trimmed.hasSuffix(":") && !trimmed.contains("  ") {
                 // Save previous device
                 if let name = currentName, !name.isEmpty {
-                    parsed.append(BluetoothDevice(name: name, type: currentType, connected: currentConnected))
+                    parsed.append(BluetoothDevice(name: name, type: currentType, connected: currentConnected, batteryLevel: currentBattery))
                 }
                 currentName = String(trimmed.dropLast()) // remove trailing colon
                 currentType = "Device"
                 currentConnected = false
+                currentBattery = nil
             } else if trimmed.hasPrefix("Minor Type:") {
                 currentType = trimmed.replacingOccurrences(of: "Minor Type:", with: "").trimmingCharacters(in: .whitespaces)
             } else if trimmed.hasPrefix("Connected:") {
                 let val = trimmed.replacingOccurrences(of: "Connected:", with: "").trimmingCharacters(in: .whitespaces)
                 currentConnected = val.lowercased() == "yes"
+            } else if trimmed.hasPrefix("Battery Level:") {
+                // Parse battery percentage (e.g. "Battery Level: 85%")
+                let val = trimmed.replacingOccurrences(of: "Battery Level:", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+                    .replacingOccurrences(of: "%", with: "")
+                currentBattery = Int(val)
             }
         }
 
         // Capture last device
         if let name = currentName, !name.isEmpty {
-            parsed.append(BluetoothDevice(name: name, type: currentType, connected: currentConnected))
+            parsed.append(BluetoothDevice(name: name, type: currentType, connected: currentConnected, batteryLevel: currentBattery))
         }
 
         return parsed
@@ -356,6 +370,20 @@ extension BluetoothPaneViewController: NSTableViewDataSource, NSTableViewDelegat
                 statusText.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             ])
             return container
+
+        case "battery":
+            // Show battery percentage if available for connected devices
+            if let level = device.batteryLevel {
+                let label = NSTextField(labelWithString: "\(level)%")
+                label.font = SnowLeopardFonts.label(size: 11)
+                label.textColor = level <= 20 ? .systemRed : .secondaryLabelColor
+                return label
+            } else {
+                let label = NSTextField(labelWithString: device.connected ? "—" : "")
+                label.font = SnowLeopardFonts.label(size: 11)
+                label.textColor = .secondaryLabelColor
+                return label
+            }
 
         default:
             return nil

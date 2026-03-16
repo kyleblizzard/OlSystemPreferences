@@ -28,6 +28,7 @@ class SharingPaneViewController: NSViewController, PaneProtocol {
 
     private let computerNameField = NSTextField()
     private let localHostnameLabel = NSTextField(labelWithString: "")
+    private let ipAddressLabel = NSTextField(labelWithString: "")
     private let serviceTable = NSTableView()
 
     // MARK: - Load View
@@ -103,6 +104,16 @@ class SharingPaneViewController: NSViewController, PaneProtocol {
             controls: [localHostnameLabel]
         )
         nameStack.addArrangedSubview(hostnameRow)
+
+        // IP Address
+        ipAddressLabel.font = SnowLeopardFonts.label(size: 11)
+        ipAddressLabel.textColor = NSColor(white: 0.15, alpha: 1.0)
+
+        let ipRow = SnowLeopardPaneHelper.makeRow(
+            label: SnowLeopardPaneHelper.makeLabel("IP Address:"),
+            controls: [ipAddressLabel]
+        )
+        nameStack.addArrangedSubview(ipRow)
 
         nameBox.contentView = nameStack
         outerStack.addArrangedSubview(nameBox)
@@ -182,6 +193,9 @@ class SharingPaneViewController: NSViewController, PaneProtocol {
         let hostname = getLocalHostname()
         localHostnameLabel.stringValue = hostname
 
+        // IP address
+        ipAddressLabel.stringValue = getIPAddress()
+
         // Sharing services — detect active services
         services = [
             SharingService(name: "Screen Sharing", isOn: checkServiceRunning("com.apple.screensharing")),
@@ -199,6 +213,29 @@ class SharingPaneViewController: NSViewController, PaneProtocol {
     }
 
     // MARK: - Helpers
+
+    /// Get the primary IP address for display alongside the computer name
+    private func getIPAddress() -> String {
+        // Try to get the IP from the primary network interface
+        if let output = runCommand("/usr/sbin/networksetup", arguments: ["-getinfo", "Wi-Fi"]) {
+            for line in output.components(separatedBy: "\n") {
+                if line.hasPrefix("IP address:") {
+                    let ip = line.replacingOccurrences(of: "IP address:", with: "").trimmingCharacters(in: .whitespaces)
+                    if !ip.isEmpty && ip != "none" { return ip }
+                }
+            }
+        }
+        // Fallback: try Ethernet
+        if let output = runCommand("/usr/sbin/networksetup", arguments: ["-getinfo", "Ethernet"]) {
+            for line in output.components(separatedBy: "\n") {
+                if line.hasPrefix("IP address:") {
+                    let ip = line.replacingOccurrences(of: "IP address:", with: "").trimmingCharacters(in: .whitespaces)
+                    if !ip.isEmpty && ip != "none" { return ip }
+                }
+            }
+        }
+        return "N/A"
+    }
 
     private func getLocalHostname() -> String {
         if let output = runCommand("/usr/sbin/scutil", arguments: ["--get", "LocalHostName"]) {
