@@ -1128,6 +1128,265 @@ class AquaProgressBar: NSView {
 }
 
 
+// MARK: - AquaHelpButton
+
+/// Purple circle help button with white "?" — matches Snow Leopard's pane help buttons.
+/// Visible in Dock, Appearance, Desktop & Screen Saver, and Exposé & Spaces panes.
+class AquaHelpButton: NSView {
+
+    var target: AnyObject?
+    var action: Selector?
+    var isEnabled: Bool = true { didSet { needsDisplay = true; alphaValue = isEnabled ? 1.0 : AquaColors.disabledAlpha } }
+
+    private var isPressed = false
+
+    /// The button draws at a fixed 20x20 size (matching Snow Leopard's help button diameter)
+    override var intrinsicContentSize: NSSize { NSSize(width: 20, height: 20) }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        translatesAutoresizingMaskIntoConstraints = false
+        setContentHuggingPriority(.required, for: .horizontal)
+        setContentHuggingPriority(.required, for: .vertical)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Center a 20x20 circle in whatever bounds we have
+        let size: CGFloat = min(bounds.width, bounds.height)
+        let circleRect = NSRect(
+            x: bounds.midX - size / 2 + 0.5,
+            y: bounds.midY - size / 2 + 0.5,
+            width: size - 1,
+            height: size - 1
+        )
+        let circlePath = NSBezierPath(ovalIn: circleRect)
+
+        // Purple/violet gradient — Snow Leopard's help button was a muted purple
+        let topColor: NSColor
+        let bottomColor: NSColor
+        if isPressed {
+            topColor = NSColor(calibratedRed: 0.45, green: 0.35, blue: 0.65, alpha: 1.0)
+            bottomColor = NSColor(calibratedRed: 0.30, green: 0.22, blue: 0.50, alpha: 1.0)
+        } else {
+            topColor = NSColor(calibratedRed: 0.60, green: 0.50, blue: 0.78, alpha: 1.0)
+            bottomColor = NSColor(calibratedRed: 0.40, green: 0.30, blue: 0.60, alpha: 1.0)
+        }
+
+        let gradient = NSGradient(starting: topColor, ending: bottomColor)
+        gradient?.draw(in: circlePath, angle: 270)
+
+        // Glossy highlight on upper half
+        NSGraphicsContext.saveGraphicsState()
+        circlePath.addClip()
+        let glossRect = NSRect(x: circleRect.minX, y: circleRect.midY,
+                                width: circleRect.width, height: circleRect.height / 2)
+        let glossPath = NSBezierPath(ovalIn: glossRect.insetBy(dx: 2, dy: -2))
+        let glossGradient = NSGradient(starting: NSColor(white: 1.0, alpha: 0.45),
+                                        ending: NSColor(white: 1.0, alpha: 0.0))
+        glossGradient?.draw(in: glossPath, angle: 270)
+        NSGraphicsContext.restoreGraphicsState()
+
+        // Border
+        let borderColor = NSColor(calibratedRed: 0.30, green: 0.22, blue: 0.50, alpha: 0.8)
+        borderColor.setStroke()
+        circlePath.lineWidth = 1.0
+        circlePath.stroke()
+
+        // "?" character centered in the circle
+        let questionFont = NSFont(name: "Lucida Grande Bold", size: size * 0.60)
+            ?? NSFont.boldSystemFont(ofSize: size * 0.60)
+        let shadow = NSShadow()
+        shadow.shadowOffset = NSSize(width: 0, height: -0.5)
+        shadow.shadowColor = NSColor(white: 0.0, alpha: 0.35)
+        shadow.shadowBlurRadius = 0
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: questionFont,
+            .foregroundColor: NSColor.white,
+            .shadow: shadow,
+        ]
+        let qStr = "?" as NSString
+        let qSize = qStr.size(withAttributes: attrs)
+        let qPoint = NSPoint(
+            x: circleRect.midX - qSize.width / 2,
+            y: circleRect.midY - qSize.height / 2 - 0.5
+        )
+        qStr.draw(at: qPoint, withAttributes: attrs)
+    }
+
+    // MARK: - Mouse
+
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        isPressed = true
+        needsDisplay = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard isEnabled, isPressed else { return }
+        isPressed = false
+        needsDisplay = true
+        let loc = convert(event.locationInWindow, from: nil)
+        if bounds.contains(loc), let action = action {
+            _ = target?.perform(action, with: self)
+        }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard isEnabled else { return }
+        let loc = convert(event.locationInWindow, from: nil)
+        let was = isPressed
+        isPressed = bounds.contains(loc)
+        if isPressed != was { needsDisplay = true }
+    }
+}
+
+
+// MARK: - AquaStepper
+
+/// Up/down arrow stepper control matching Snow Leopard Aqua style.
+/// Visible in the Appearance pane (Number of recent items: 10 Applications).
+class AquaStepper: NSView {
+
+    /// Current value managed by the stepper
+    var value: Int = 0 { didSet { needsDisplay = true } }
+    var minValue: Int = 0
+    var maxValue: Int = 100
+    var increment: Int = 1
+    var isEnabled: Bool = true { didSet { needsDisplay = true; alphaValue = isEnabled ? 1.0 : AquaColors.disabledAlpha } }
+
+    /// Called when the value changes — passes the new value
+    var onValueChanged: ((Int) -> Void)?
+
+    var target: AnyObject?
+    var action: Selector?
+
+    private var pressedSegment: Int? = nil  // 0 = down (bottom), 1 = up (top)
+
+    override var intrinsicContentSize: NSSize { NSSize(width: 15, height: 22) }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        translatesAutoresizingMaskIntoConstraints = false
+        setContentHuggingPriority(.required, for: .horizontal)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let midY = rect.midY
+        let radius: CGFloat = 2.5
+
+        // Full outline
+        let fullPath = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+
+        // Top half (up button)
+        let topRect = NSRect(x: rect.minX, y: midY, width: rect.width, height: rect.height / 2)
+        drawStepperSegment(in: topRect, pressed: pressedSegment == 1, clipPath: fullPath, isTop: true)
+
+        // Bottom half (down button)
+        let bottomRect = NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height / 2)
+        drawStepperSegment(in: bottomRect, pressed: pressedSegment == 0, clipPath: fullPath, isTop: false)
+
+        // Border
+        AquaColors.grayBorder.setStroke()
+        fullPath.lineWidth = 1.0
+        fullPath.stroke()
+
+        // Divider line
+        AquaColors.grayBorder.setStroke()
+        let divider = NSBezierPath()
+        divider.move(to: NSPoint(x: rect.minX, y: midY))
+        divider.line(to: NSPoint(x: rect.maxX, y: midY))
+        divider.lineWidth = 0.5
+        divider.stroke()
+
+        // Up arrow (top segment)
+        let upArrowColor = (isEnabled && value < maxValue) ? AquaColors.popupArrowColor : AquaColors.popupArrowColor.withAlphaComponent(0.35)
+        drawArrow(in: topRect, pointingUp: true, color: upArrowColor)
+
+        // Down arrow (bottom segment)
+        let downArrowColor = (isEnabled && value > minValue) ? AquaColors.popupArrowColor : AquaColors.popupArrowColor.withAlphaComponent(0.35)
+        drawArrow(in: bottomRect, pointingUp: false, color: downArrowColor)
+    }
+
+    private func drawStepperSegment(in rect: NSRect, pressed: Bool, clipPath: NSBezierPath, isTop: Bool) {
+        NSGraphicsContext.saveGraphicsState()
+        clipPath.addClip()
+
+        let top = pressed ? AquaColors.grayPressed : AquaColors.grayGradientTop
+        let bottom = pressed ? AquaColors.grayGradientBottom.blended(withFraction: 0.15, of: .black) ?? AquaColors.grayGradientBottom : AquaColors.grayGradientBottom
+        let gradient = NSGradient(starting: top, ending: bottom)
+        gradient?.draw(in: rect, angle: 270)
+
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private func drawArrow(in rect: NSRect, pointingUp: Bool, color: NSColor) {
+        let cx = rect.midX
+        let cy = rect.midY
+        let arrowW: CGFloat = 5.0
+        let arrowH: CGFloat = 3.0
+
+        color.setFill()
+        let arrow = NSBezierPath()
+        if pointingUp {
+            arrow.move(to: NSPoint(x: cx, y: cy + arrowH / 2))
+            arrow.line(to: NSPoint(x: cx - arrowW / 2, y: cy - arrowH / 2))
+            arrow.line(to: NSPoint(x: cx + arrowW / 2, y: cy - arrowH / 2))
+        } else {
+            arrow.move(to: NSPoint(x: cx, y: cy - arrowH / 2))
+            arrow.line(to: NSPoint(x: cx - arrowW / 2, y: cy + arrowH / 2))
+            arrow.line(to: NSPoint(x: cx + arrowW / 2, y: cy + arrowH / 2))
+        }
+        arrow.close()
+        arrow.fill()
+    }
+
+    // MARK: - Mouse
+
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        let loc = convert(event.locationInWindow, from: nil)
+        pressedSegment = loc.y >= bounds.midY ? 1 : 0
+        needsDisplay = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard isEnabled, let seg = pressedSegment else { return }
+        let loc = convert(event.locationInWindow, from: nil)
+        if bounds.contains(loc) {
+            if seg == 1 && value < maxValue {
+                value = min(value + increment, maxValue)
+                onValueChanged?(value)
+                if let action = action { _ = target?.perform(action, with: self) }
+            } else if seg == 0 && value > minValue {
+                value = max(value - increment, minValue)
+                onValueChanged?(value)
+                if let action = action { _ = target?.perform(action, with: self) }
+            }
+        }
+        pressedSegment = nil
+        needsDisplay = true
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard isEnabled else { return }
+        let loc = convert(event.locationInWindow, from: nil)
+        if bounds.contains(loc) {
+            let newSeg = loc.y >= bounds.midY ? 1 : 0
+            if pressedSegment != newSeg {
+                pressedSegment = newSeg
+                needsDisplay = true
+            }
+        }
+    }
+}
+
+
 // MARK: - AquaGroupBox
 
 /// Snow Leopard group box with etched border and optional title.

@@ -1,0 +1,172 @@
+{
+  "batchId" : "AA7B37AD-F153-4838-A72E-4825AD1289CA",
+  "endDate" : "2026-03-17T04:04:45Z",
+  "results" : [
+    {
+      "index" : 14,
+      "filename" : "paneicon_printfax_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_printfax_png.jpg",
+      "status" : "done"
+    },
+    {
+      "status" : "done",
+      "index" : 13,
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_trackpad_png.jpg",
+      "filename" : "paneicon_trackpad_png"
+    },
+    {
+      "status" : "done",
+      "filename" : "paneicon_languagetext_png",
+      "index" : 5,
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_languagetext_png.jpg"
+    },
+    {
+      "index" : 26,
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_timemachine_png.jpg",
+      "filename" : "paneicon_timemachine_png",
+      "status" : "done"
+    },
+    {
+      "index" : 2,
+      "filename" : "paneicon_desktopscreensaver_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_desktopscreensaver_png.jpg",
+      "status" : "done"
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_cdsdvds_png.jpg",
+      "filename" : "paneicon_cdsdvds_png",
+      "status" : "done",
+      "index" : 8
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_mouse_png.jpg",
+      "status" : "done",
+      "filename" : "paneicon_mouse_png",
+      "index" : 12
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_mobileme_png.jpg",
+      "filename" : "paneicon_mobileme_png",
+      "status" : "done",
+      "index" : 16
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_appearance_png.jpg",
+      "status" : "done",
+      "filename" : "paneicon_appearance_png",
+      "index" : 1
+    },
+    {
+      "filename" : "paneicon_exposespaces_png",
+      "status" : "done",
+      "index" : 4,
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_exposespaces_png.jpg"
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_energysaver_png.jpg",
+      "status" : "done",
+      "filename" : "paneicon_energysaver_png",
+      "index" : 10
+    },
+    {
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_spotlight_png.jpg",
+      "filename" : "paneicon_spotlight_png",
+      "index" : 7
+    },
+    {
+      "status" : "done",
+      "index" : 15,
+      "filename" : "paneicon_sound_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_sound_png.jpg"
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_universalaccess_png.jpg",
+      "status" : "done",
+      "index" : 27,
+      "filename" : "paneicon_universalaccess_png"
+    },
+    {
+      "index" : 19,
+      "status" : "done",
+      "filename" : "paneicon_sharing_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_sharing_png.jpg"
+    },
+    {
+      "filename" : "paneicon_dock_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_dock_png.jpg",
+      "index" : 3,
+      "status" : "done"
+    },
+    {
+      "status" : "done",
+      "filename" : "paneicon_speech_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_speech_png.jpg",
+      "index" : 24
+    },
+    {
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_keyboard_png.jpg",
+      "filename" : "paneicon_keyboard_png",
+      "index" : 11
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_network_png.jpg",
+      "filename" : "paneicon_network_png",
+      "index" : 17,
+      "status" : "done"
+    },
+    {
+      "filename" : "paneicon_startupdisk_png",
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_startupdisk_png.jpg",
+      "index" : 25
+    },
+    {
+      "index" : 23,
+      "filename" : "paneicon_softwareupdate_png",
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_softwareupdate_png.jpg"
+    },
+    {
+      "index" : 18,
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_bluetooth_png.jpg",
+      "filename" : "paneicon_bluetooth_png",
+      "status" : "done"
+    },
+    {
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_accounts_png.jpg",
+      "index" : 20,
+      "filename" : "paneicon_accounts_png"
+    },
+    {
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_security_png.jpg",
+      "status" : "done",
+      "index" : 6,
+      "filename" : "paneicon_security_png"
+    },
+    {
+      "index" : 21,
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_datetime_png.jpg",
+      "filename" : "paneicon_datetime_png"
+    },
+    {
+      "filename" : "paneicon_parentalcontrols_png",
+      "status" : "done",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_parentalcontrols_png.jpg",
+      "index" : 22
+    },
+    {
+      "status" : "done",
+      "filename" : "paneicon_displays_png",
+      "outputPath" : "\/Users\/bliz\/Documents\/Development\/OlSystemPreferences\/grokassets\/paneicon_displays_png.jpg",
+      "index" : 9
+    }
+  ],
+  "total" : 27,
+  "startDate" : "2026-03-17T03:56:36Z",
+  "completed" : 27,
+  "failed" : 0
+}
